@@ -119,20 +119,52 @@
 
             <div class="space-y-4">
                 @forelse($recentNotes as $note)
-                    <div class="bg-white rounded-2xl p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[#A7C7E7]">
+                    @php
+                        // Get category color and convert to light background
+                        $color = $note->category ? $note->category->color : '#94A3B8';
+                        
+                        if (str_starts_with($color, '#')) {
+                            $hex = ltrim($color, '#');
+                            $r = hexdec(substr($hex, 0, 2));
+                            $g = hexdec(substr($hex, 2, 2));
+                            $b = hexdec(substr($hex, 4, 2));
+                            $bgColor = "rgba($r, $g, $b, 0.08)";
+                            $borderColor = "rgba($r, $g, $b, 0.25)";
+                        } else {
+                            $bgColor = '';
+                            $borderColor = '';
+                        }
+                    @endphp
+                    
+                    <div class="rounded-2xl p-6 hover:shadow-lg transition-all border-2 cursor-pointer group"
+                         style="background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.08)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.25)' }};"
+                         onclick="window.location='{{ route('notes.show', $note) }}'">
                         <div class="flex items-start gap-4">
+                            @if($note->category)
+                                <div class="text-3xl">{{ $note->category->icon }}</div>
+                            @else
+                                <div class="text-3xl">📝</div>
+                            @endif
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-2 h-2 rounded-full bg-[#2C74B3]"></div>
-                                    <h3 class="text-lg font-bold text-[#1E293B]">{{ $note->title }}</h3>
+                                    <h3 class="text-lg font-bold text-[#1E293B] group-hover:text-[#2C74B3] transition-colors">{{ $note->title }}</h3>
                                 </div>
                                 <p class="text-sm text-[#1E293B]/60 mb-3 line-clamp-2">
                                     {{ $note->excerpt }}
                                 </p>
                                 <div class="flex items-center gap-4 text-xs text-[#1E293B]/50">
                                     @if($note->category)
-                                        <span class="px-3 py-1 rounded-lg bg-blue-100 text-blue-700">
-                                            {{ $note->category->name }}
+                                        @php
+                                            $catColor = $note->category->color;
+                                            $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
+                                            $class = str_starts_with($catColor, '#') ? '' : $catColor;
+                                        @endphp
+                                        <span class="px-3 py-1 rounded-lg text-white {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                            {{ $note->category->icon }} {{ $note->category->name }}
+                                        </span>
+                                    @else
+                                        <span class="px-3 py-1 rounded-lg bg-gray-200 text-gray-600">
+                                            📝 Tanpa Kategori
                                         </span>
                                     @endif
                                     <span class="flex items-center gap-1">
@@ -143,7 +175,9 @@
                                     </span>
                                 </div>
                             </div>
-                            <a href="{{ route('notes.show', $note) }}" class="bg-white hover:bg-[#2C74B3] hover:text-white border border-[#E5E7EB] hover:border-[#2C74B3] text-[#1E293B] font-medium px-4 py-2 rounded-xl transition-colors">
+                            <a href="{{ route('notes.show', $note) }}" 
+                               onclick="event.stopPropagation()"
+                               class="bg-white hover:bg-[#2C74B3] hover:text-white border border-[#E5E7EB] hover:border-[#2C74B3] text-[#1E293B] font-medium px-4 py-2 rounded-xl transition-colors">
                                 Lihat
                             </a>
                         </div>

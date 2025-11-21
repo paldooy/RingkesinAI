@@ -107,19 +107,80 @@ u    <div class="mx-auto p-6">
                     </div>
 
                     <!-- Category Selection -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]"
+                         x-data="categoryFormEdit"
+                         x-init="init()">
                         <h3 class="text-lg font-bold text-[#1E293B] mb-4">Kategori</h3>
+                        
                         <select 
                             name="category_id" 
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                            x-model="selectedCat"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition mb-3"
                         >
                             <option value="">Pilih Kategori</option>
                             @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id', $note->category_id) == $category->id ? 'selected' : '' }}>
+                                <option value="{{ $category->id }}">
                                     {{ $category->icon }} {{ $category->name }}
                                 </option>
                             @endforeach
+                            <option value="new">➕ Buat Kategori Baru</option>
                         </select>
+
+                        <!-- New Category Form -->
+                        <div x-show="selectedCat === 'new'" x-cloak class="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <div>
+                                <label class="block text-xs font-medium text-[#1E293B] mb-2">Nama Kategori</label>
+                                <input 
+                                    type="text"
+                                    x-model="newCatName"
+                                    name="new_category_name"
+                                    placeholder="Contoh: Matematika"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm"
+                                />
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="relative">
+                                    <label class="block text-xs font-medium text-[#1E293B] mb-2">Emoji</label>
+                                    <div class="relative">
+                                        <input 
+                                            type="text"
+                                            x-model="newCatEmoji"
+                                            name="new_category_icon"
+                                            @click="toggleEmojiPicker()"
+                                            readonly
+                                            placeholder="📚"
+                                            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm text-center cursor-pointer"
+                                        />
+                                        
+                                        <!-- Emoji Picker Dropdown -->
+                                        <div x-show="showEmojiPicker" 
+                                             @click.away="showEmojiPicker = false"
+                                             x-cloak
+                                             class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
+                                            <div class="grid grid-cols-8 gap-1">
+                                                <template x-for="emoji in emojis" :key="emoji">
+                                                    <button 
+                                                        type="button"
+                                                        @click="selectEmoji(emoji)"
+                                                        class="text-2xl hover:bg-blue-100 rounded p-1 transition-colors"
+                                                        x-text="emoji">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-[#1E293B] mb-2">Warna</label>
+                                    <input 
+                                        type="color"
+                                        x-model="newCatColor"
+                                        name="new_category_color"
+                                        class="w-full h-10 rounded-lg border border-gray-300 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tags -->
@@ -386,4 +447,38 @@ u    <div class="mx-auto p-6">
     }
 </style>
 @endpush
+
+@push('scripts')
+<script>
+    // Alpine.js component for edit form
+    Alpine.data('categoryFormEdit', () => ({
+        selectedCat: '{{ old('category_id', $note->category_id) }}',
+        newCatName: '',
+        newCatEmoji: '📁',
+        newCatColor: '#3B82F6',
+        showEmojiPicker: false,
+        emojis: [],
+        
+        init() {
+            // Initialize emoji array
+            this.emojis = ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'];
+            console.log('Edit form emoji count:', this.emojis.length);
+        },
+        
+        selectEmoji(emoji) {
+            this.newCatEmoji = emoji;
+            this.showEmojiPicker = false;
+            console.log('✅ Emoji selected:', emoji);
+            console.log('📊 Current state - showEmojiPicker:', this.showEmojiPicker, 'newCatEmoji:', this.newCatEmoji);
+        },
+        
+        toggleEmojiPicker() {
+            this.showEmojiPicker = !this.showEmojiPicker;
+            console.log('🔄 Emoji picker toggled:', this.showEmojiPicker);
+            console.log('📋 Available emojis:', this.emojis.length);
+        }
+    }));
+</script>
+@endpush
+
 @endsection

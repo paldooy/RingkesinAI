@@ -190,8 +190,12 @@ class AISummarizeController extends Controller
     {
         $request->validate([
             'summary' => 'required|string',
-            'category_id' => 'required|exists:categories,id',
             'title' => 'nullable|string|max:255',
+            'category_id' => 'nullable|exists:categories,id',
+            'create_category' => 'nullable|boolean',
+            'category_name' => 'required_if:create_category,true|string|max:100',
+            'category_icon' => 'nullable|string|max:10',
+            'category_color' => 'nullable|string|max:7',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
         ]);
@@ -210,6 +214,7 @@ class AISummarizeController extends Controller
             'content_length' => $contentLength,
             'has_html' => preg_match('/<[^>]+>/', $rawSummary) ? 'yes' : 'no',
             'tags_count' => count($request->input('tags', [])),
+            'create_category' => $request->input('create_category', false),
         ]);
         
         // Apply sanitization
@@ -225,11 +230,30 @@ class AISummarizeController extends Controller
             ]);
         }
 
-        // Create the note without relying on a missing 'notes' relation on the User model.
+        // Handle category: create new or use existing
+        $categoryId = $request->input('category_id');
+        
+        if ($request->input('create_category') === true) {
+            // Create new category
+            $category = \App\Models\Category::create([
+                'user_id' => Auth::id(),
+                'name' => $request->input('category_name'),
+                'icon' => $request->input('category_icon', '📁'),
+                'color' => $request->input('category_color', '#3B82F6'),
+            ]);
+            $categoryId = $category->id;
+            
+            Log::info('New category created', [
+                'category_id' => $categoryId,
+                'name' => $category->name,
+            ]);
+        }
+
+        // Create the note
         $note = new Note([
             'title' => $title,
             'content' => $rawSummary,
-            'category_id' => $request->input('category_id'),
+            'category_id' => $categoryId,
         ]);
         $note->user_id = Auth::id();
         $note->save();
@@ -240,7 +264,7 @@ class AISummarizeController extends Controller
             foreach ($request->input('tags') as $tagName) {
                 $tag = \App\Models\Tag::firstOrCreate(
                     ['name' => trim($tagName)],
-                    ['user_id' => Auth::id()]
+                    ['color' => sprintf('#%06X', mt_rand(0, 0xFFFFFF))]
                 );
                 $tagIds[] = $tag->id;
             }
