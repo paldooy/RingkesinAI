@@ -353,15 +353,72 @@
                         <label class="block text-sm font-medium text-[#1E293B] mb-3">
                             Kategori Catatan
                         </label>
-                        <select 
-                            x-model="selectedCategory"
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
-                        >
-                            <option value="">Pilih kategori</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}">{{ $category->icon }} {{ $category->name }}</option>
-                            @endforeach
-                        </select>
+                        
+                        <div class="space-y-3">
+                            <select 
+                                x-model="selectedCategory"
+                                class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                            >
+                                <option value="">Pilih kategori</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->icon }} {{ $category->name }}</option>
+                                @endforeach
+                                <option value="new">➕ Buat Kategori Baru</option>
+                            </select>
+
+                            <!-- New Category Form (Show when "Buat Kategori Baru" selected) -->
+                            <div x-show="selectedCategory === 'new'" x-cloak class="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                                <div>
+                                    <label class="block text-xs font-medium text-[#1E293B] mb-2">Nama Kategori Baru</label>
+                                    <input 
+                                        type="text"
+                                        x-model="newCategoryName"
+                                        placeholder="Contoh: Matematika"
+                                        class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm"
+                                    />
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="relative">
+                                        <label class="block text-xs font-medium text-[#1E293B] mb-2">Emoji</label>
+                                        <div class="relative">
+                                            <input 
+                                                type="text"
+                                                x-model="newCategoryEmoji"
+                                                @click="showEmojiPicker = !showEmojiPicker"
+                                                readonly
+                                                placeholder="📚"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm text-center cursor-pointer"
+                                            />
+                                            
+                                            <!-- Emoji Picker Dropdown -->
+                                            <div x-show="showEmojiPicker" 
+                                                 @click.away="showEmojiPicker = false"
+                                                 x-cloak
+                                                 class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
+                                                <div class="grid grid-cols-8 gap-1">
+                                                    <template x-for="emoji in emojiList" :key="emoji">
+                                                        <button 
+                                                            type="button"
+                                                            @click="newCategoryEmoji = emoji; showEmojiPicker = false"
+                                                            class="text-2xl hover:bg-blue-100 rounded p-1 transition-colors"
+                                                            x-text="emoji">
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-[#1E293B] mb-2">Warna</label>
+                                        <input 
+                                            type="color"
+                                            x-model="newCategoryColor"
+                                            class="w-full h-10 rounded-lg border border-gray-300 cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-6">
@@ -458,6 +515,13 @@ function aiSummarize() {
         summaryMetadata: null,
         tags: [],
         tagInput: '',
+        
+        // New category fields
+        newCategoryName: '',
+        newCategoryEmoji: '📁',
+        newCategoryColor: '#3B82F6',
+        showEmojiPicker: false,
+        emojiList: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'],
         
         // Revision state
         revisionInstruction: '',
@@ -616,9 +680,17 @@ function aiSummarize() {
         },
 
         async saveSummary() {
+            // Validate category selection or new category creation
             if (!this.selectedCategory) {
                 alert('❌ Mohon pilih kategori terlebih dahulu!');
                 return;
+            }
+
+            if (this.selectedCategory === 'new') {
+                if (!this.newCategoryName || !this.newCategoryName.trim()) {
+                    alert('❌ Mohon isi nama kategori baru!');
+                    return;
+                }
             }
 
             try {
@@ -630,8 +702,25 @@ function aiSummarize() {
                     firstChars: this.summary.substring(0, 100),
                     hasHTML: /<[^>]+>/.test(this.summary),
                     linesCount: this.summary.split('\n').length,
-                    tagsCount: this.tags.length
+                    tagsCount: this.tags.length,
+                    categoryMode: this.selectedCategory === 'new' ? 'create new' : 'existing'
                 });
+                
+                const requestBody = {
+                    summary: this.summary, // Save raw markdown
+                    title: title,
+                    tags: this.tags
+                };
+
+                // If creating new category, include category data
+                if (this.selectedCategory === 'new') {
+                    requestBody.create_category = true;
+                    requestBody.category_name = this.newCategoryName.trim();
+                    requestBody.category_icon = this.newCategoryEmoji || '📁';
+                    requestBody.category_color = this.newCategoryColor || '#3B82F6';
+                } else {
+                    requestBody.category_id = this.selectedCategory;
+                }
                 
                 const response = await fetch('{{ route("summarize.save") }}', {
                     method: 'POST',
@@ -639,12 +728,7 @@ function aiSummarize() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    body: JSON.stringify({
-                        summary: this.summary, // Save raw markdown
-                        category_id: this.selectedCategory,
-                        title: title,
-                        tags: this.tags
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 // Check if response is JSON or HTML error page

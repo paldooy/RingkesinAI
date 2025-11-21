@@ -30,9 +30,9 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('notes.store') }}" class="max-w-7xl mx-auto">
+        <form method="POST" action="{{ route('notes.store') }}" class="max-w-7xl mx-auto" id="noteForm">
             @csrf
-
+            
             <!-- Main Content Area -->
             <div class="space-y-6">
                 <!-- Title -->
@@ -62,30 +62,17 @@
                         required
                         class="w-full"
                     >{{ old('content') }}</textarea>
-                    
-                    <div class="flex items-start gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mt-3">
-                        <span class="text-blue-600 text-lg">💡</span>
-                        <div class="text-xs text-blue-800 space-y-1">
-                            <p class="font-semibold">Fitur Editor:</p>
-                            <ul class="list-disc list-inside text-[11px] space-y-0.5">
-                                <li><strong>Table:</strong> Insert → Table (bisa resize & merge cells)</li>
-                                <li><strong>Code Block:</strong> Format → Code atau Insert → Code Sample</li>
-                                <li><strong>Highlight:</strong> Format → Background Color atau pilih teks → Background</li>
-                                <li><strong>Bold/Italic:</strong> Toolbar atau Ctrl+B / Ctrl+I</li>
-                                <li><strong>Lists:</strong> Bullet & Numbered list di toolbar</li>
-                            </ul>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Metadata & Actions Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-16">
                     <!-- Actions -->
                     <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
                         <h3 class="text-lg font-bold text-[#1E293B] mb-4">Aksi</h3>
                         <div class="space-y-3">
                             <button 
-                                type="submit"
+                                type="button"
+                                onclick="submitNoteForm()"
                                 class="w-full bg-[#2C74B3] hover:bg-[#205295] text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                             >
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,19 +93,81 @@
                     </div>
 
                     <!-- Category Selection -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]"
+                         x-data="categoryForm"
+                         x-init="init()">
                         <h3 class="text-lg font-bold text-[#1E293B] mb-4">Kategori</h3>
+                        
                         <select 
                             name="category_id" 
-                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                            x-model="selectedCat"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition mb-3"
                         >
                             <option value="">Pilih Kategori</option>
                             @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                <option value="{{ $category->id }}">
                                     {{ $category->icon }} {{ $category->name }}
                                 </option>
                             @endforeach
+                            <option value="new">➕ Buat Kategori Baru</option>
                         </select>
+
+                        <!-- New Category Form -->
+                        <div x-show="selectedCat === 'new'" x-cloak class="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <div>
+                                <label class="block text-xs font-medium text-[#1E293B] mb-2">Nama Kategori</label>
+                                <input 
+                                    type="text"
+                                    x-model="newCatName"
+                                    name="new_category_name"
+                                    placeholder="Contoh: Matematika"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm"
+                                />
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="relative">
+                                    <label class="block text-xs font-medium text-[#1E293B] mb-2">Emoji</label>
+                                    <div class="relative">
+                                        <input 
+                                            type="text"
+                                            x-model="newCatEmoji"
+                                            name="new_category_icon"
+                                            @click="toggleEmojiPicker()"
+                                            readonly
+                                            placeholder="📚"
+                                            class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm text-center cursor-pointer"
+                                        />
+                                        
+                                        <!-- Emoji Picker Popup -->
+                                        <div x-show="showEmojiPicker"
+                                             @click.away="showEmojiPicker = false"
+                                             class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
+                                            <p class="text-xs text-gray-500 mb-2" x-text="'Emojis loaded: ' + emojis.length"></p>
+                                            <div class="grid grid-cols-8 gap-1">
+                                                <template x-for="(emoji, index) in emojis" :key="index">
+                                                    <button 
+                                                        type="button"
+                                                        @click="selectEmoji(emoji)"
+                                                        class="text-2xl hover:bg-blue-100 rounded p-1 transition-colors"
+                                                        x-text="emoji">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                            <p x-show="emojis.length === 0" class="text-xs text-red-500 mt-2">⚠️ No emojis loaded</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-[#1E293B] mb-2">Warna</label>
+                                    <input 
+                                        type="color"
+                                        x-model="newCatColor"
+                                        name="new_category_color"
+                                        class="w-full h-10 rounded-lg border border-gray-300 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tags -->
@@ -173,6 +222,75 @@
 <script src="https://cdn.tiny.cloud/1/kxr7knwfldryrpt79dmjl3iu43ggy14brhjff2t4hblvd6y1/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    // Alpine.js component for category form
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('categoryForm', () => ({
+            selectedCat: '{{ old("category_id") }}',
+            newCatName: '',
+            newCatEmoji: '📁',
+            newCatColor: '#3B82F6',
+            showEmojiPicker: false,
+            emojis: [],
+            
+            init() {
+                // Initialize emoji list
+                this.emojis = ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'];
+                console.log('✅ Category form initialized');
+                console.log('📊 Total emojis:', this.emojis.length);
+                console.log('🎯 showEmojiPicker state:', this.showEmojiPicker);
+                console.log('📁 First 5 emojis:', this.emojis.slice(0, 5));
+            },
+            
+            selectEmoji(emoji) {
+                this.newCatEmoji = emoji;
+                this.showEmojiPicker = false;
+                console.log('✅ Emoji selected:', emoji);
+                console.log('📊 Current state - showEmojiPicker:', this.showEmojiPicker, 'newCatEmoji:', this.newCatEmoji);
+            },
+            
+            toggleEmojiPicker() {
+                this.showEmojiPicker = !this.showEmojiPicker;
+                console.log('🔄 Emoji picker toggled:', this.showEmojiPicker);
+                console.log('📋 Available emojis:', this.emojis.length);
+            }
+        }));
+    });
+
+    // Function untuk submit form dari button
+    window.submitNoteForm = function() {
+        console.log('🚀 submitNoteForm called');
+        const form = document.querySelector('#noteForm');
+        
+        if (!form) {
+            console.error('❌ Form not found');
+            return;
+        }
+        
+        // Sync TinyMCE
+        if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+            tinymce.get('content').save();
+            console.log('✅ TinyMCE synced');
+        }
+        
+        // Validate
+        const title = form.querySelector('#title');
+        const content = form.querySelector('#content');
+        
+        if (!title?.value?.trim()) {
+            alert('❌ Judul harus diisi!');
+            title.focus();
+            return;
+        }
+        
+        if (!content?.value?.trim()) {
+            alert('❌ Konten harus diisi!');
+            return;
+        }
+        
+        console.log('✅ Validation passed, submitting...');
+        form.submit();
+    };
+    
     // Function to convert markdown tables to HTML
     function convertMarkdownTables(content) {
         // Detect markdown tables and convert to HTML
@@ -366,6 +484,82 @@
             });
         }
     });
+
+    // Ensure TinyMCE content is synced before form submission
+    const noteForm = document.querySelector('#noteForm');
+    
+    if (noteForm) {
+        noteForm.addEventListener('submit', function(e) {
+            console.log('✅ Form submit event triggered');
+            
+            // Trigger TinyMCE to save content to textarea
+            if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+                tinymce.get('content').save();
+                console.log('✅ TinyMCE content saved to textarea');
+            }
+            
+            // Log form data for debugging
+            const formData = new FormData(this);
+            console.log('📋 Form data:', {
+                title: formData.get('title'),
+                content_length: formData.get('content')?.length || 0,
+                category_id: formData.get('category_id'),
+                new_category_name: formData.get('new_category_name'),
+                tags: formData.getAll('tags[]')
+            });
+            
+            // Check if form is valid
+            if (!this.checkValidity()) {
+                console.error('❌ Form validation failed');
+                e.preventDefault();
+                return false;
+            }
+            
+            console.log('✅ Form submitting...');
+            return true; // Allow form to submit
+        });
+    }
+    
+    // Test function untuk debug
+    window.testFormSubmit = function() {
+        console.log('🔍 Testing form submit...');
+        
+        const form = document.querySelector('#noteForm');
+        if (!form) {
+            console.error('❌ Form not found!');
+            return;
+        }
+        
+        console.log('✅ Form found');
+        console.log('Form action:', form.action);
+        console.log('Form method:', form.method);
+        
+        // Check required fields
+        const title = form.querySelector('#title');
+        const content = form.querySelector('#content');
+        
+        console.log('Title value:', title?.value || '(empty)');
+        console.log('Content value length:', content?.value?.length || 0);
+        
+        if (!title?.value) {
+            alert('❌ Judul harus diisi!');
+            title.focus();
+            return;
+        }
+        
+        if (typeof tinymce !== 'undefined' && tinymce.get('content')) {
+            tinymce.get('content').save();
+            console.log('✅ TinyMCE saved');
+        }
+        
+        if (!content?.value) {
+            alert('❌ Konten harus diisi!');
+            return;
+        }
+        
+        console.log('✅ All validations passed, submitting form...');
+        form.submit();
+    };
 </script>
 @endpush
 

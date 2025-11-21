@@ -39,7 +39,10 @@ class CategoriesController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        $this->authorize('update', $category);
+        // Check if user owns this category
+        if ($category->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -57,7 +60,11 @@ class CategoriesController extends Controller
      */
     public function destroy(Category $category)
     {
-        $this->authorize('delete', $category);
+        // Check if user owns this category
+        if ($category->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         $category->delete();
 
         return back()->with('success', 'Kategori berhasil dihapus!');

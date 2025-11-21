@@ -58,21 +58,46 @@ class NotesController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'summary' => 'nullable|string',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'nullable|string',
+            'new_category_name' => 'nullable|string|max:100',
+            'new_category_icon' => 'nullable|string|max:10',
+            'new_category_color' => 'nullable|string|max:7',
             'emoji' => 'nullable|string|max:10',
             'color' => 'nullable|string|max:7',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
         ]);
 
+        // Handle category: create new or use existing
+        $categoryId = $request->category_id;
+        
+        if ($request->category_id === 'new') {
+            // Validate new category name is required
+            if (empty($request->new_category_name)) {
+                return back()->withErrors(['new_category_name' => 'Nama kategori baru wajib diisi'])->withInput();
+            }
+            
+            // Create new category
+            $category = Category::create([
+                'user_id' => Auth::id(),
+                'name' => $request->new_category_name,
+                'icon' => $request->new_category_icon ?? '📁',
+                'color' => $request->new_category_color ?? '#3B82F6',
+            ]);
+            $categoryId = $category->id;
+        } elseif (empty($categoryId)) {
+            // If no category selected and not creating new, set to null
+            $categoryId = null;
+        }
+
         $note = Note::create([
             'user_id' => Auth::id(),
-            'category_id' => $request->category_id,
-            'title' => $request->title,
-            'content' => $request->content,
-            'summary' => $request->summary,
-            'emoji' => $request->emoji ?? '📝',
-            'color' => $request->color ?? '#3B82F6',
+            'category_id' => $categoryId,
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'summary' => $request->input('summary'),
+            'emoji' => $request->input('emoji', '📝'),
+            'color' => $request->input('color', '#3B82F6'),
         ]);
 
         // Attach tags
@@ -80,7 +105,7 @@ class NotesController extends Controller
             $tagIds = [];
             foreach ($request->tags as $tagName) {
                 $tag = Tag::firstOrCreate(
-                    ['name' => $tagName],
+                    ['name' => trim($tagName)],
                     ['color' => sprintf('#%06X', mt_rand(0, 0xFFFFFF))]
                 );
                 $tagIds[] = $tag->id;
@@ -128,21 +153,52 @@ class NotesController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'summary' => 'nullable|string',
-            'category_id' => 'required|exists:categories,id',
+            'category_id' => 'nullable|string',
+            'new_category_name' => 'nullable|string|max:100',
+            'new_category_icon' => 'nullable|string|max:10',
+            'new_category_color' => 'nullable|string|max:7',
             'emoji' => 'nullable|string|max:10',
             'color' => 'nullable|string|max:7',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
         ]);
 
-        $note->update($request->only(['title', 'content', 'summary', 'category_id', 'emoji', 'color']));
+        // Handle category: create new or use existing
+        $categoryId = $request->input('category_id');
+        
+        if ($request->input('category_id') === 'new') {
+            // Validate new category name is required
+            if (empty($request->new_category_name)) {
+                return back()->withErrors(['new_category_name' => 'Nama kategori baru wajib diisi'])->withInput();
+            }
+            
+            // Create new category
+            $category = Category::create([
+                'user_id' => Auth::id(),
+                'name' => $request->input('new_category_name'),
+                'icon' => $request->input('new_category_icon', '📁'),
+                'color' => $request->input('new_category_color', '#3B82F6'),
+            ]);
+            $categoryId = $category->id;
+        } elseif (empty($categoryId)) {
+            $categoryId = null;
+        }
+
+        $note->update([
+            'title' => $request->input('title'),
+            'content' => $request->input('content'),
+            'summary' => $request->input('summary'),
+            'category_id' => $categoryId,
+            'emoji' => $request->input('emoji'),
+            'color' => $request->input('color'),
+        ]);
 
         // Update tags if provided
         if ($request->has('tags')) {
             $tagIds = [];
-            foreach ($request->tags as $tagName) {
+            foreach ($request->input('tags') as $tagName) {
                 $tag = Tag::firstOrCreate(
-                    ['name' => $tagName],
+                    ['name' => trim($tagName)],
                     ['color' => sprintf('#%06X', mt_rand(0, 0xFFFFFF))]
                 );
                 $tagIds[] = $tag->id;

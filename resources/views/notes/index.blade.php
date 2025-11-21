@@ -71,12 +71,30 @@
             <!-- Category Filter Pills -->
             <div class="flex flex-wrap gap-2 mt-4">
                 <a href="{{ route('notes.index') }}" 
-                   class="px-4 py-2 {{ !request('category_id') ? 'bg-[#2C74B3] text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100' }} rounded-full text-sm transition-colors">
+                   class="px-4 py-2 {{ !request('category_id') ? 'bg-[#2C74B3] text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100' }} rounded-full text-sm font-medium transition-colors">
                     Semua
                 </a>
                 @foreach($categories as $cat)
+                    @php
+                        $color = $cat->color;
+                        // Convert hex to RGB and create light version
+                        if (str_starts_with($color, '#')) {
+                            $hex = ltrim($color, '#');
+                            $r = hexdec(substr($hex, 0, 2));
+                            $g = hexdec(substr($hex, 2, 2));
+                            $b = hexdec(substr($hex, 4, 2));
+                            $bgColor = "rgba($r, $g, $b, 0.15)";
+                            $textColor = "rgba(0, 0, 0, 0.6)";
+                        } else {
+                            $bgColor = '';
+                            $textColor = '';
+                        }
+                        $isActive = request('category_id') == $cat->id;
+                    @endphp
+                    
                     <a href="{{ route('notes.index', ['category_id' => $cat->id]) }}" 
-                       class="px-4 py-2 {{ request('category_id') == $cat->id ? 'bg-[#2C74B3] text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100' }} rounded-full text-sm transition-colors">
+                       class="px-4 py-2 rounded-full text-sm font-medium transition-all hover:shadow-md {{ $isActive ? 'ring-2 ring-offset-2' : '' }}"
+                       style="{{ $isActive ? 'background-color: ' . $color . '; color: "rgba(0, 0, 0, 0.6)"; ring-color: ' . $color : 'background-color: ' . ($bgColor ?: 'rgb(243 244 246)') . '; color: ' . ($textColor ?: 'rgb(55 65 81)') }}">
                         {{ $cat->icon }} {{ $cat->name }}
                     </a>
                 @endforeach
@@ -87,13 +105,28 @@
         <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @forelse($notes as $note)
                 @php
-                    $categoryColor = $note->category ? $note->category->color : 'bg-gray-500';
-                    $bgOpacity = str_replace('bg-', '', $categoryColor) . '-500/10';
+                    // Get category color and convert to light background
+                    $color = $note->category ? $note->category->color : '#94A3B8';
+                    
+                    // Convert hex to RGB and create light version
+                    if (str_starts_with($color, '#')) {
+                        $hex = ltrim($color, '#');
+                        $r = hexdec(substr($hex, 0, 2));
+                        $g = hexdec(substr($hex, 2, 2));
+                        $b = hexdec(substr($hex, 4, 2));
+                        // Create very light version (90% white mixed)
+                        $bgColor = "rgba($r, $g, $b, 0.1)";
+                        $borderColor = "rgba($r, $g, $b, 0.3)";
+                    } else {
+                        // Fallback for Tailwind classes
+                        $bgColor = '';
+                        $borderColor = '';
+                    }
                 @endphp
                 
                 <div 
-                    class="p-6 rounded-2xl border-2 cursor-pointer group relative overflow-hidden transition-all hover:shadow-xl bg-{{ $bgOpacity }}"
-                    style="border-color: transparent;"
+                    class="p-6 rounded-2xl border-2 cursor-pointer group relative overflow-hidden transition-all hover:shadow-xl"
+                    style="background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.1)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.3)' }};"
                     onclick="window.location='{{ route('notes.show', $note) }}'"
                 >
                     <!-- Gradient overlay on hover -->
@@ -109,8 +142,18 @@
                                     {{ $note->title }}
                                 </h3>
                                 @if($note->category)
-                                    <span class="inline-block px-3 py-1 {{ $note->category->color }} text-white text-xs rounded-lg">
-                                        {{ $note->category->name }}
+                                    @php
+                                        $color = $note->category->color;
+                                        // Handle both hex colors and Tailwind classes
+                                        $style = str_starts_with($color, '#') ? "background-color: {$color};" : '';
+                                        $class = str_starts_with($color, '#') ? '' : $color;
+                                    @endphp
+                                    <span class="inline-block px-3 py-1 text-white text-xs rounded-lg {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                        {{ $note->category->icon }} {{ $note->category->name }}
+                                    </span>
+                                @else
+                                    <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">
+                                        📝 Tanpa Kategori
                                     </span>
                                 @endif
                             </div>
@@ -183,8 +226,26 @@
 
         <!-- List View -->
         <div x-show="viewMode === 'list'" x-cloak class="space-y-4">
-            @foreach($notes as $note)
-                <div class="bg-white rounded-2xl p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-[#A7C7E7] cursor-pointer"
+            @forelse($notes as $note)
+                @php
+                    // Get category color and convert to light background for list view
+                    $color = $note->category ? $note->category->color : '#94A3B8';
+                    
+                    if (str_starts_with($color, '#')) {
+                        $hex = ltrim($color, '#');
+                        $r = hexdec(substr($hex, 0, 2));
+                        $g = hexdec(substr($hex, 2, 2));
+                        $b = hexdec(substr($hex, 4, 2));
+                        $bgColor = "rgba($r, $g, $b, 0.05)";
+                        $borderColor = "rgba($r, $g, $b, 0.2)";
+                    } else {
+                        $bgColor = '';
+                        $borderColor = '';
+                    }
+                @endphp
+                
+                <div class="rounded-2xl p-6 hover:shadow-lg transition-shadow border-2 cursor-pointer"
+                     style="background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.05)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.2)' }};"
                      onclick="window.location='{{ route('notes.show', $note) }}'">
                     <div class="flex items-start gap-4">
                         <div class="text-3xl">{{ $note->category ? $note->category->icon : '📝' }}</div>
@@ -198,8 +259,18 @@
                             </p>
                             <div class="flex items-center gap-4 text-xs text-[#1E293B]/50">
                                 @if($note->category)
-                                    <span class="px-3 py-1 rounded-lg {{ str_replace('bg-', 'bg-', $note->category->color) }}-100 {{ str_replace('bg-', 'text-', $note->category->color) }}-700">
-                                        {{ $note->category->name }}
+                                    @php
+                                        $color = $note->category->color;
+                                        // Handle both hex colors and Tailwind classes
+                                        $style = str_starts_with($color, '#') ? "background-color: {$color};" : '';
+                                        $class = str_starts_with($color, '#') ? '' : $color;
+                                    @endphp
+                                    <span class="px-3 py-1 rounded-lg text-white {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                        {{ $note->category->icon }} {{ $note->category->name }}
+                                    </span>
+                                @else
+                                    <span class="px-3 py-1 rounded-lg bg-gray-200 text-gray-600">
+                                        📝 Tanpa Kategori
                                     </span>
                                 @endif
                                 <span>{{ $note->created_at->format('d M Y • H:i') }}</span>
@@ -212,7 +283,22 @@
                         </a>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div class="col-span-full text-center py-20">
+                    <div class="w-24 h-24 bg-[#F9FAFB] rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-12 h-12 text-[#1E293B]/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl text-[#1E293B] mb-2">Belum ada catatan</h3>
+                    <p class="text-[#1E293B]/60 mb-6">
+                        Buat catatan pertamamu sekarang!
+                    </p>
+                    <a href="{{ route('notes.create') }}" class="inline-block bg-[#2C74B3] hover:bg-[#205295] text-white px-6 py-3 rounded-xl transition-colors">
+                        Buat Catatan Baru
+                    </a>
+                </div>
+            @endforelse
         </div>
 
         <!-- Pagination -->

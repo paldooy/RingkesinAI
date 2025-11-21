@@ -39,7 +39,8 @@ class GeminiService
         $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
         
         try {
-            $response = Http::timeout(60)->post($url, [
+            // Increased timeout for large documents (120 seconds)
+            $response = Http::timeout(120)->post($url, [
                 'contents' => [
                     [
                         'parts' => [
@@ -51,7 +52,7 @@ class GeminiService
                     'temperature' => 0.7,
                     'topK' => 40,
                     'topP' => 0.95,
-                    'maxOutputTokens' => 8192, // Increased from 2048 to 8192 (gemini-2.0-flash-lite max)
+                    'maxOutputTokens' => 12000, // Updated to 12000 as requested
                 ]
             ]);
 
@@ -103,52 +104,101 @@ class GeminiService
     }
 
     /**
-     * Build prompt with content and instructions.
-     *
-     * @param string $content
-     * @param array $instructions
-     * @return string
+     * Build prompt with HYBRID approach + STRONG user priority enforcement.
+     * Even for long documents, user instructions must be followed exactly.
      */
     private function buildPrompt(string $content, array $instructions): string
     {
-        $prompt = "Buatkan ringkasan dari teks berikut:\n\n";
+        $hasCustomInstructions = !empty($instructions) && 
+                                 !empty(array_filter($instructions, fn($i) => !empty($i['text'] ?? '')));
         
-        // Add instructions if provided
-        if (!empty($instructions)) {
-            $prompt .= "Instruksi khusus:\n";
+        $prompt = "";
+        
+        // ========================================
+        // CRITICAL: USER INSTRUCTIONS FIRST (Top Priority)
+        // ========================================
+        if ($hasCustomInstructions) {
+            $prompt .= "⚠️ INSTRUKSI UTAMA DARI USER (PRIORITAS ABSOLUT - WAJIB DIIKUTI):\n\n";
+            
             foreach ($instructions as $instruction) {
-                if (isset($instruction['text']) && !empty($instruction['text'])) {
-                    $prompt .= "- " . $instruction['text'] . "\n";
+                if (!empty($instruction['text'])) {
+                    $prompt .= $instruction['text'] . "\n\n";
                 }
             }
-            $prompt .= "\n";
+            
+            // EXPLICIT enforcement for common conflicts
+            $userText = implode(' ', array_column($instructions, 'text'));
+            $wantsParagraph = (stripos($userText, 'paragraf') !== false || stripos($userText, 'paragraph') !== false);
+            $wantsNoBullets = (stripos($userText, 'tanpa poin') !== false || stripos($userText, 'tanpa bullet') !== false || stripos($userText, 'no bullet') !== false);
+            
+            if ($wantsParagraph || $wantsNoBullets) {
+                $prompt .= "🚨 PENTING: User meminta FORMAT PARAGRAF / TANPA POIN-POIN.\n";
+                $prompt .= "   → WAJIB menulis dalam bentuk PARAGRAF penuh\n";
+                $prompt .= "   → DILARANG KERAS menggunakan bullet points (-, *, •) atau numbering (1., 2., 3.)\n";
+                $prompt .= "   → TIDAK PEDULI seberapa panjang dokumen, tetap gunakan paragraf\n";
+                $prompt .= "   → Struktur: Heading (#) → Paragraf lengkap → Sub-heading (##) → Paragraf lengkap\n\n";
+            }
+            
+            $prompt .= "💡 ATURAN PRIORITAS:\n";
+            $prompt .= "   1. Instruksi user di atas adalah HUKUM yang tidak boleh dilanggar\n";
+            $prompt .= "   2. Jika dokumen panjang, TETAP ikuti format yang diminta user\n";
+            $prompt .= "   3. Jika ada konflik antara efisiensi vs instruksi user → pilih instruksi user\n";
+            $prompt .= "   4. JANGAN gunakan format default AI jika user sudah spesifikasi format\n\n";
+            
+        } else {
+            // AUTO MODE: Default summarization
+            $prompt .= "TUGAS: Buatkan ringkuman komprehensif dari dokumen berikut.\n\n";
         }
         
-        $prompt .= "===== ISI DOKUMEN =====\n\n";
+        // ========================================
+        // DOCUMENT CONTENT
+        // ========================================
+        $prompt .= "DOKUMEN:\n```\n";
         $prompt .= $content;
-        $prompt .= "\n\n===== AKHIR DOKUMEN =====\n\n";
+        $prompt .= "\n```\n\n";
         
-        $prompt .= "Buatkan ringkasan yang jelas, terstruktur, dan mudah dipahami.\n";
-        $prompt .= "Gunakan format MARKDOWN MURNI untuk struktur:\n";
-        $prompt .= "- Heading (# H1, ## H2, ### H3)\n";
-        $prompt .= "- Bold (**teks tebal**) untuk penekanan penting\n";
-        $prompt .= "- List (bullet: -, numbered: 1. 2. 3.)\n";
-        $prompt .= "- Tabel markdown (| Header 1 | Header 2 | dengan separator |---|---|)\n";
-        $prompt .= "- Code blocks dengan ```language untuk kode\n";
-        $prompt .= "- Blockquote (> teks) untuk kutipan/catatan\n\n";
-        $prompt .= "⚠️ ATURAN PENTING FORMAT:\n";
-        $prompt .= "- HANYA gunakan syntax MARKDOWN standar\n";
-        $prompt .= "- JANGAN gunakan HTML tags (<span>, <div>, <mark>, dll)\n";
-        $prompt .= "- JANGAN gunakan inline CSS/styling (style=\"...\", background-color, dll)\n";
-        $prompt .= "- JANGAN gunakan HTML attributes (class, id, style)\n";
-        $prompt .= "- Output harus pure Markdown yang bisa di-parse oleh CommonMark\n\n";
+        // ========================================
+        // MINIMAL GUARDRAILS (Always apply)
+        // ========================================
+        $prompt .= "ATURAN OUTPUT:\n";
+        $prompt .= "1. Format HANYA Markdown standar: # ## ** * - ` | >\n";
+        $prompt .= "2. DILARANG: HTML tags, inline CSS, external links\n";
+        $prompt .= "3. Panjang maksimal: ~6000 kata atau 8000 tokens\n";
+        $prompt .= "4. Jika terpotong: selesaikan paragraf/section terakhir dengan sempurna\n";
         
-        $prompt .= "ATURAN PANJANG:\n";
-        $prompt .= "- Maksimal ~6000 kata (8000 tokens)\n";
-        $prompt .= "- Jika dokumen terlalu panjang:\n";
-        $prompt .= "  * Selesaikan bagian yang sedang dijelaskan sampai LENGKAP\n";
-        $prompt .= "  * JANGAN potong di tengah kalimat/paragraf\n";
-        $prompt .= "  * Prioritaskan poin terpenting di awal\n\n";
+        if ($hasCustomInstructions) {
+            $prompt .= "5. PRIORITAS TERTINGGI: Ikuti format yang diminta user di bagian INSTRUKSI UTAMA\n";
+        }
+        
+        // ========================================
+        // ANTI-BULLET-SPAM RULES (For long documents)
+        // ========================================
+        $prompt .= "\n🎯 ATURAN KHUSUS UNTUK DOKUMEN PANJANG:\n";
+        $prompt .= "   → JANGAN buat poin-poin singkat/superfisial\n";
+        $prompt .= "   → FOKUS pada materi yang benar-benar penting dan perlu dirangkum\n";
+        $prompt .= "   → Setiap poin harus dijelaskan dengan SUBSTANSI (min 2-3 kalimat)\n";
+        $prompt .= "   → Lebih baik: 5 poin mendalam daripada 20 poin dangkal\n";
+        $prompt .= "   → Gunakan paragraf untuk menjelaskan konsep kompleks\n";
+        $prompt .= "   → Skip detail minor jika tidak critical\n\n";
+        
+        $prompt .= "🚫 SKIP BAGIAN TIDAK PENTING:\n";
+        $prompt .= "   → ABAIKAN: Cover, judul, daftar isi, kata pengantar, pendahuluan generik\n";
+        $prompt .= "   → ABAIKAN: Profil penulis, daftar gambar/tabel, bibliografi di awal\n";
+        $prompt .= "   → ABAIKAN: Tujuan pembelajaran, kompetensi dasar, atau metadata kurikulum\n";
+        $prompt .= "   → ABAIKAN: Pertanyaan pemahaman konsep/latihan yang hanya berisi soal tanpa materi\n";
+        $prompt .= "   → LANGSUNG mulai dari INTI MATERI (bab pertama yang berisi substansi)\n";
+        $prompt .= "   → Identifikasi dimana materi substansial dimulai, lalu mulai rangkum dari sana\n\n";
+        
+        $prompt .= "📊 STRATEGI TOKEN LIMIT:\n";
+        $prompt .= "   → Jika dokumen memiliki 10+ materi/bab dan mendekati batas token:\n";
+        $prompt .= "   → JANGAN rangkum semua materi dengan poin singkat\n";
+        $prompt .= "   → LEBIH BAIK: Rangkum hanya sampai materi ke-5 atau ke-6 dengan DETAIL LENGKAP\n";
+        $prompt .= "   → Setiap materi harus mencakup SEMUA informasi penting dalam bentuk paragraf\n";
+        $prompt .= "   → Prioritas: KUALITAS (detail lengkap) > KUANTITAS (merangkum semua)\n";
+        $prompt .= "   → Jika hanya mampu cover 50% dokumen dengan detail → itu lebih baik daripada 100% tapi superfisial\n";
+        $prompt .= "   → Akhiri dengan kalimat: '(Rangkuman mencakup materi 1-X dari Y materi total karena keterbatasan token)'\n";
+        
+        $prompt .= "\nOUTPUT:\n";
         
         return $prompt;
     }
@@ -174,9 +224,20 @@ class GeminiService
 
         // Handle specific error codes
         if ($errorCode === 429) {
+            // Check if it's quota exceeded or rate limit
+            $isQuotaExceeded = stripos($errorMessage, 'quota') !== false || stripos($errorMessage, 'billing') !== false;
+            
+            if ($isQuotaExceeded) {
+                return [
+                    'success' => false,
+                    'error' => '⚠️ API Quota Habis! API key Gemini sudah melebihi batas penggunaan. Solusi: 1) Tunggu reset quota (biasanya setiap hari), 2) Ganti API key baru, atau 3) Upgrade plan. Cek: https://ai.dev/usage',
+                    'error_code' => 429,
+                ];
+            }
+            
             return [
                 'success' => false,
-                'error' => 'Kuota API Gemini sudah habis. Silakan coba lagi nanti atau hubungi administrator.',
+                'error' => '⏱️ Rate limit terlampaui. Terlalu banyak request dalam waktu singkat. Silakan tunggu 1-2 menit lalu coba lagi.',
                 'error_code' => 429,
             ];
         }
