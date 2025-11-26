@@ -178,15 +178,25 @@
                             <div class="flex gap-1">
                                 <a href="{{ route('notes.show', $note) }}" 
                                    onclick="event.stopPropagation()"
-                                   class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]">
+                                   class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]"
+                                   title="Lihat">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
                                 </a>
+                                <button 
+                                   onclick="event.stopPropagation(); shareNote('{{ $note->title }}', '{{ $note->excerpt }}', '{{ route('notes.show', $note) }}')"
+                                   class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-green-600"
+                                   title="Share">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                                    </svg>
+                                </button>
                                 <a href="{{ route('notes.edit', $note) }}" 
                                    onclick="event.stopPropagation()"
-                                   class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]">
+                                   class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]"
+                                   title="Edit">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
@@ -308,7 +318,47 @@
     </div>
 </div>
 
+<script>
+    function shareNote(title, excerpt, url) {
+        // Copy link to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+            // Show toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up';
+            toast.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Link berhasil disalin!</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }).catch(err => {
+            alert('Gagal menyalin link');
+        });
+    }
+</script>
+
 <style>
     [x-cloak] { display: none !important; }
+    
+    @keyframes slide-up {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .animate-slide-up {
+        animation: slide-up 0.3s ease-out;
+    }
+</style>
 </style>
 @endsection

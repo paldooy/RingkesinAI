@@ -67,12 +67,12 @@ Misalnya, untuk mencari limit fungsi f(x) = (x² - 4)/(x - 2) saat x → 2:
 Materi kalkulus dasar ini mencakup konsep-konsep fundamental yang penting untuk dipahami. Perhatian khusus harus diberikan pada pemahaman definisi dan penerapannya dalam contoh-contoh soal.
 MARKDOWN;
 
-    // Convert to HTML with highlights
-    $html = format_note_content_with_highlights($markdown, true);
+    // // Convert to HTML with highlights
+    // $html = format_note_content_with_highlights($markdown, true);
     
-    // Display result
-    return view('test-highlight', [
-        'markdown' => $markdown,
-        'html' => $html
-    ]);
+    // // Display result
+    // return view('test-highlight', [
+    //     'markdown' => $markdown,
+    //     'html' => $html
+    // ]);
 });

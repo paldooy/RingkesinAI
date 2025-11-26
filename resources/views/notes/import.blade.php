@@ -1,86 +1,70 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Catatan - Ringkesin')
+@section('title', 'Import Catatan - Ringkesin')
 
 @section('content')
 <div class="flex-1 bg-[#F9FAFB] overflow-auto">
-u    <div class="mx-auto p-6">
+    <div class="mx-auto p-6">
         <!-- Header -->
         <div class="mb-6 max-w-7xl mx-auto">
             <div class="flex items-center gap-2 mb-2">
-                <a href="{{ route('notes.show', $note) }}" class="text-[#1E293B]/60 hover:text-[#2C74B3] transition-colors">
+                <a href="{{ route('notes.index') }}" class="text-[#1E293B]/60 hover:text-[#2C74B3] transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                 </a>
-                <h1 class="text-3xl font-bold text-[#1E293B]">Edit Catatan</h1>
+                <h1 class="text-3xl font-bold text-[#1E293B]">Import Catatan</h1>
             </div>
             <p class="text-sm text-[#1E293B]/60">
-                Perbarui catatan: {{ $note->title }}
+                Simpan catatan yang dibagikan temanmu ke akunmu sendiri
             </p>
         </div>
 
-        @if ($errors->any())
-            <div class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-6">
-                <ul class="list-disc list-inside text-sm">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+        @if(session('error'))
+            <div class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-6 max-w-7xl mx-auto">
+                {{ session('error') }}
             </div>
         @endif
 
-        <form method="POST" action="{{ route('notes.update', $note) }}" class="max-w-7xl mx-auto">
+        <form action="{{ route('notes.import.save', $share->share_code) }}" method="POST" class="max-w-7xl mx-auto">
             @csrf
-            @method('PUT')
 
             <!-- Main Content Area -->
             <div class="space-y-6">
                 <!-- Title -->
                 <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
                     <label for="title" class="block text-sm font-medium text-[#1E293B] mb-2">
-                        Judul Catatan
+                        Judul Catatan <span class="text-red-500">*</span>
                     </label>
                     <input 
                         type="text" 
                         id="title" 
                         name="title" 
                         value="{{ old('title', $note->title) }}"
-                        placeholder="Contoh: Persamaan Kuadrat - Rumus ABC"
+                        placeholder="Masukkan judul catatan"
                         required
                         class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                     />
+                    @error('title')
+                        <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
-                <!-- Content Editor with TinyMCE -->
+                <!-- Content Preview -->
                 <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
-                    <label for="content" class="block text-sm font-medium text-[#1E293B] mb-2">
-                        Isi Catatan
+                    <label class="block text-sm font-medium text-[#1E293B] mb-2">
+                        Isi Catatan (Preview)
                     </label>
-                    <textarea 
-                        id="content" 
-                        name="content" 
-                        required
-                        class="w-full"
-                    >{!! old('content', markdown_to_html($note->content)) !!}</textarea>
-                    
-                    <div class="flex items-start gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 mt-3">
-                        <span class="text-blue-600 text-lg">💡</span>
-                        <div class="text-xs text-blue-800 space-y-1">
-                            <p class="font-semibold">Fitur Editor:</p>
-                            <ul class="list-disc list-inside text-[11px] space-y-0.5">
-                                <li><strong>Table:</strong> Insert → Table (bisa resize & merge cells)</li>
-                                <li><strong>Code Block:</strong> Format → Code atau Insert → Code Sample</li>
-                                <li><strong>Highlight:</strong> Format → Background Color atau pilih teks → Background</li>
-                                <li><strong>Bold/Italic:</strong> Toolbar atau Ctrl+B / Ctrl+I</li>
-                                <li><strong>Lists:</strong> Bullet & Numbered list di toolbar</li>
-                            </ul>
+                    <div class="bg-gray-50 rounded-xl p-6 border-2 border-gray-300 max-h-[500px] overflow-y-auto">
+                        <div class="prose prose-sm md:prose-base max-w-none">
+                            {!! markdown_to_html($note->content) !!}
                         </div>
                     </div>
+                    <p class="text-xs text-gray-500 mt-2">💡 Isi catatan akan otomatis tersalin saat Anda menyimpan</p>
                 </div>
 
                 <!-- Metadata & Actions Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-16">
                     <!-- Actions -->
                     <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
                         <h3 class="text-lg font-bold text-[#1E293B] mb-4">Aksi</h3>
@@ -92,11 +76,11 @@ u    <div class="mx-auto p-6">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                 </svg>
-                                Update Catatan
+                                Simpan ke Akun Saya
                             </button>
                             <a 
-                                href="{{ route('notes.show', $note) }}"
-                                class="w-full border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                href="{{ route('notes.index') }}"
+                                class="w-full border border-gray-300 hover:bg-gray-50 text-[#1E293B] font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                             >
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -106,9 +90,9 @@ u    <div class="mx-auto p-6">
                         </div>
                     </div>
 
-                    <!-- Category Selection -->
+                    <!-- Category -->
                     <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]"
-                         x-data="categoryFormEdit"
+                         x-data="categoryFormImport"
                          x-init="init()">
                         <h3 class="text-lg font-bold text-[#1E293B] mb-4">Kategori</h3>
                         
@@ -152,13 +136,12 @@ u    <div class="mx-auto p-6">
                                             class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-sm text-center cursor-pointer"
                                         />
                                         
-                                        <!-- Emoji Picker Dropdown -->
-                                        <div x-show="showEmojiPicker" 
+                                        <!-- Emoji Picker Popup -->
+                                        <div x-show="showEmojiPicker"
                                              @click.away="showEmojiPicker = false"
-                                             x-cloak
                                              class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
                                             <div class="grid grid-cols-8 gap-1">
-                                                <template x-for="emoji in emojis" :key="emoji">
+                                                <template x-for="(emoji, index) in emojis" :key="index">
                                                     <button 
                                                         type="button"
                                                         @click="selectEmoji(emoji)"
@@ -181,6 +164,10 @@ u    <div class="mx-auto p-6">
                                 </div>
                             </div>
                         </div>
+
+                        @error('category_id')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <!-- Tags -->
@@ -189,7 +176,7 @@ u    <div class="mx-auto p-6">
                              tags: {{ json_encode($note->tags->pluck('name')->toArray()) }}, 
                              tagInput: '' 
                          }">
-                        <h3 class="text-lg font-bold text-[#1E293B] mb-4">Tag</h3>
+                        <h3 class="text-lg font-bold text-[#1E293B] mb-4">Tags</h3>
                         
                         <div class="flex gap-2 mb-3">
                             <input 
@@ -227,235 +214,48 @@ u    <div class="mx-auto p-6">
                         <p class="text-xs text-[#1E293B]/50 mt-3">
                             Tekan Enter atau klik + untuk menambah tag
                         </p>
+                        
+                        @error('tags')
+                            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <!-- Share Info Card -->
+                <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-[#1E293B] mb-2">Informasi Share</h4>
+                            <div class="text-sm text-gray-700 space-y-1">
+                                <p><span class="font-medium">Dibagikan oleh:</span> {{ $note->user->name }}</p>
+                                <p><span class="font-medium">Kode Share:</span> <code class="bg-white px-2 py-1 rounded font-mono text-blue-600">{{ $share->share_code }}</code></p>
+                                <p><span class="font-medium">Dilihat:</span> {{ $share->view_count }} kali</p>
+                                @if($share->expires_at)
+                                    <p><span class="font-medium">Berlaku hingga:</span> {{ $share->expires_at->format('d M Y H:i') }}</p>
+                                @else
+                                    <p><span class="font-medium">Berlaku:</span> Tanpa batas waktu</p>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </form>
     </div>
 </div>
-@push('scripts')
-<script src="https://cdn.tiny.cloud/1/kxr7knwfldryrpt79dmjl3iu43ggy14brhjff2t4hblvd6y1/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
-    // Function to convert markdown tables to HTML
-    function convertMarkdownTables(content) {
-        // Detect markdown tables and convert to HTML
-        const tableRegex = /(\|[^\n]+\|\r?\n)((?:\|[-:| ]+\|\r?\n))((?:\|[^\n]+\|\r?\n?)+)/gm;
-        
-        return content.replace(tableRegex, function(match, header, separator, rows) {
-            // Parse header
-            const headers = header.split('|').filter(h => h.trim()).map(h => h.trim());
-            
-            // Parse rows
-            const rowLines = rows.trim().split('\n');
-            const parsedRows = rowLines.map(row => 
-                row.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
-            );
-            
-            // Build HTML table
-            let html = '<table border="1" style="border-collapse: collapse; width: 100%;">\n';
-            html += '  <thead>\n    <tr>\n';
-            headers.forEach(h => {
-                html += `      <th style="padding: 8px; background-color: #2C74B3; color: white; border: 1px solid #1e5a8e;">${h}</th>\n`;
-            });
-            html += '    </tr>\n  </thead>\n  <tbody>\n';
-            
-            parsedRows.forEach(row => {
-                html += '    <tr>\n';
-                row.forEach(cell => {
-                    html += `      <td style="padding: 8px; border: 1px solid #e2e8f0;">${cell}</td>\n`;
-                });
-                html += '    </tr>\n';
-            });
-            
-            html += '  </tbody>\n</table>\n';
-            return html;
-        });
-    }
-
-    // Initialize TinyMCE
-    tinymce.init({
-        selector: 'textarea#content',
-        height: 700,
-        menubar: 'file edit view insert format tools table',
-        
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'codesample', 'help', 'wordcount'
-        ],
-        
-        toolbar: 'undo redo | blocks | ' +
-            'bold italic underline strikethrough | forecolor backcolor | ' +
-            'alignleft aligncenter alignright alignjustify | ' +
-            'bullist numlist outdent indent | ' +
-            'table tabledelete | tableprops tablerowprops tablecellprops | ' +
-            'tableinsertrowbefore tableinsertrowafter tabledeleterow | ' +
-            'tableinsertcolbefore tableinsertcolafter tabledeletecol | ' +
-            'codesample code | removeformat | help',
-        
-        // Table options
-        table_toolbar: 'tableprops tabledelete | tableinsertrowbefore tableinsertrowafter tabledeleterow | tableinsertcolbefore tableinsertcolafter tabledeletecol',
-        table_appearance_options: true,
-        table_grid: true,
-        table_resize_bars: true,
-        table_default_attributes: {
-            border: '1'
-        },
-        table_default_styles: {
-            'border-collapse': 'collapse',
-            'width': '100%'
-        },
-        table_class_list: [
-            {title: 'Default', value: ''},
-            {title: 'Blue Header', value: 'table-blue'},
-            {title: 'Striped', value: 'table-striped'}
-        ],
-        
-        // Code sample settings
-        codesample_languages: [
-            {text: 'HTML/XML', value: 'markup'},
-            {text: 'JavaScript', value: 'javascript'},
-            {text: 'CSS', value: 'css'},
-            {text: 'PHP', value: 'php'},
-            {text: 'Python', value: 'python'},
-            {text: 'Java', value: 'java'},
-            {text: 'C', value: 'c'},
-            {text: 'C++', value: 'cpp'},
-            {text: 'SQL', value: 'sql'},
-            {text: 'Bash', value: 'bash'}
-        ],
-        
-        // Content style
-        content_style: `
-            body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
-                font-size: 16px;
-                line-height: 1.6;
-                color: #1e293b;
-                padding: 20px;
-            }
-            h1 { 
-                color: #0f172a; 
-                border-bottom: 3px solid #2C74B3; 
-                padding-bottom: 0.3em;
-                margin-top: 0;
-            }
-            h2 { 
-                color: #1e293b; 
-                border-bottom: 2px solid #e2e8f0; 
-                padding-bottom: 0.3em;
-            }
-            h3 { color: #334155; }
-            table { 
-                border-collapse: collapse; 
-                width: 100%; 
-                margin: 1em 0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            }
-            table.table-blue thead { 
-                background: linear-gradient(135deg, #2C74B3 0%, #205295 100%);
-                color: white;
-            }
-            table.table-striped tbody tr:nth-child(even) {
-                background-color: #f8fafc;
-            }
-            th { 
-                padding: 12px; 
-                text-align: left;
-                font-weight: 700;
-                background-color: #2C74B3;
-                color: white;
-                border: 1px solid #1e5a8e;
-            }
-            td { 
-                padding: 10px; 
-                border: 1px solid #e2e8f0;
-            }
-            tbody tr:hover {
-                background-color: #e0f2fe;
-            }
-            code {
-                background-color: #f1f5f9;
-                padding: 2px 6px;
-                border-radius: 3px;
-                color: #dc2626;
-                font-size: 0.9em;
-            }
-            pre {
-                background-color: #1e293b;
-                color: #e2e8f0;
-                padding: 1em;
-                border-radius: 8px;
-                overflow-x: auto;
-            }
-            pre code {
-                background-color: transparent;
-                color: inherit;
-                padding: 0;
-            }
-            blockquote {
-                border-left: 4px solid #2C74B3;
-                padding-left: 1em;
-                margin: 1em 0;
-                font-style: italic;
-                color: #475569;
-                background-color: #f8fafc;
-                padding: 1em;
-            }
-        `,
-        
-        // Before setting content, convert markdown tables
-        setup: function(editor) {
-            editor.on('BeforeSetContent', function(e) {
-                if (e.content) {
-                    e.content = convertMarkdownTables(e.content);
-                }
-            });
-            
-            // Add custom button for markdown table
-            editor.ui.registry.addButton('markdowntable', {
-                text: '📋 MD Table',
-                tooltip: 'Insert Markdown Table',
-                onAction: function() {
-                    const markdownTable = '| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |';
-                    const htmlTable = convertMarkdownTables(markdownTable);
-                    editor.insertContent(htmlTable);
-                }
-            });
-            
-            // Update toolbar to include markdown table button
-            editor.on('init', function() {
-                console.log('TinyMCE initialized successfully');
-            });
-        }
-    });
-</script>
-@endpush
-
-@push('styles')
-<style>
-    /* TinyMCE Container Styling */
-    .tox-tinymce {
-        border-radius: 12px !important;
-        border: 1px solid #E5E7EB !important;
-    }
-    
-    /* Custom table classes for TinyMCE */
-    .tox .tox-edit-area {
-        border-radius: 0 0 12px 12px !important;
-    }
-</style>
-@endpush
-
 @endsection
 
 @push('scripts')
 <script>
-    // Alpine.js component for edit form
+    // Alpine.js component for import category form
     document.addEventListener('alpine:init', () => {
-        Alpine.data('categoryFormEdit', () => ({
-            selectedCat: '{{ old('category_id', $note->category_id) }}',
+        Alpine.data('categoryFormImport', () => ({
+            selectedCat: '{{ old("category_id") }}',
             newCatName: '',
             newCatEmoji: '📁',
             newCatColor: '#3B82F6',
@@ -463,9 +263,9 @@ u    <div class="mx-auto p-6">
             emojis: [],
             
             init() {
-                // Initialize emoji array
+                // Initialize emoji list
                 this.emojis = ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'];
-                console.log('✅ Edit category form initialized, emoji count:', this.emojis.length);
+                console.log('✅ Import category form initialized');
             },
             
             selectEmoji(emoji) {
@@ -479,4 +279,211 @@ u    <div class="mx-auto p-6">
         }));
     });
 </script>
+@endpush
+
+@push('styles')
+<style>
+    /* Alpine.js cloak */
+    [x-cloak] { display: none !important; }
+    
+    /* Enhanced prose/markdown styling */
+    .prose {
+        color: #1E293B;
+        line-height: 1.8;
+        font-size: 1rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .prose * {
+        max-width: 100%;
+    }
+    
+    .prose h1 {
+        color: #0F172A;
+        font-weight: 800;
+        font-size: 2em;
+        margin-top: 0;
+        margin-bottom: 1em;
+        line-height: 1.2;
+        border-bottom: 3px solid #2C74B3;
+        padding-bottom: 0.5em;
+    }
+    
+    .prose h2 {
+        color: #1E293B;
+        font-weight: 700;
+        font-size: 1.6em;
+        margin-top: 2em;
+        margin-bottom: 1em;
+        line-height: 1.3;
+        border-bottom: 2px solid #E2E8F0;
+        padding-bottom: 0.4em;
+    }
+    
+    .prose h3 {
+        color: #1E293B;
+        font-weight: 600;
+        font-size: 1.3em;
+        margin-top: 1.6em;
+        margin-bottom: 0.8em;
+        line-height: 1.4;
+    }
+    
+    .prose h4 {
+        color: #334155;
+        font-weight: 600;
+        font-size: 1.1em;
+        margin-top: 1.4em;
+        margin-bottom: 0.6em;
+    }
+    
+    .prose p {
+        margin-bottom: 1.5em;
+        line-height: 1.8;
+        text-align: justify;
+    }
+    
+    .prose ul, .prose ol {
+        margin-left: 1.625em;
+        margin-bottom: 1.5em;
+        padding-left: 0.375em;
+    }
+    
+    .prose li {
+        margin-bottom: 0.5em;
+        line-height: 1.8;
+    }
+    
+    .prose li > p {
+        margin-bottom: 0.75em;
+    }
+    
+    .prose ul > li {
+        list-style-type: disc;
+    }
+    
+    .prose ol > li {
+        list-style-type: decimal;
+    }
+    
+    .prose strong, .prose b {
+        font-weight: 700;
+        color: #0F172A;
+    }
+    
+    .prose em, .prose i {
+        font-style: italic;
+    }
+    
+    .prose a {
+        color: #2C74B3;
+        text-decoration: underline;
+        font-weight: 500;
+    }
+    
+    .prose a:hover {
+        color: #205295;
+    }
+    
+    .prose code {
+        background: #E2E8F0;
+        color: #1E293B;
+        padding: 0.2em 0.4em;
+        border-radius: 0.25em;
+        font-size: 0.875em;
+        font-family: 'Courier New', Consolas, Monaco, monospace;
+        font-weight: 500;
+    }
+    
+    .prose pre {
+        background: #1E293B;
+        color: #F8FAFC;
+        padding: 1.25em;
+        border-radius: 0.5em;
+        overflow-x: auto;
+        margin-bottom: 1.5em;
+        line-height: 1.7;
+    }
+    
+    .prose pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        font-size: 0.875em;
+    }
+    
+    .prose blockquote {
+        border-left: 4px solid #2C74B3;
+        padding-left: 1.25em;
+        margin-left: 0;
+        margin-bottom: 1.5em;
+        font-style: italic;
+        color: #475569;
+        background: #F8FAFC;
+        padding: 1em 1.25em;
+        border-radius: 0 0.5em 0.5em 0;
+    }
+    
+    .prose blockquote p {
+        margin-bottom: 0.5em;
+    }
+    
+    .prose blockquote p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .prose hr {
+        border: 0;
+        border-top: 2px solid #E2E8F0;
+        margin: 2em 0;
+    }
+    
+    .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5em;
+        overflow-x: auto;
+        display: block;
+    }
+    
+    .prose th, .prose td {
+        border: 1px solid #E2E8F0;
+        padding: 0.75em;
+        text-align: left;
+    }
+    
+    .prose th {
+        background: #F1F5F9;
+        font-weight: 600;
+        color: #1E293B;
+    }
+    
+    .prose img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.5em;
+        margin: 1.5em 0;
+    }
+    
+    /* Scrollbar styling */
+    .prose::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    .prose::-webkit-scrollbar-track {
+        background: #F1F5F9;
+        border-radius: 4px;
+    }
+    
+    .prose::-webkit-scrollbar-thumb {
+        background: #CBD5E1;
+        border-radius: 4px;
+    }
+    
+    .prose::-webkit-scrollbar-thumb:hover {
+        background: #94A3B8;
+    }
+</style>
 @endpush
