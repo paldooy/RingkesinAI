@@ -156,7 +156,7 @@ u    <div class="mx-auto p-6">
                                         <div x-show="showEmojiPicker" 
                                              @click.away="showEmojiPicker = false"
                                              x-cloak
-                                             class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
+                                             class="absolute z-[100] mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
                                             <div class="grid grid-cols-8 gap-1">
                                                 <template x-for="emoji in emojis" :key="emoji">
                                                     <button 
@@ -460,13 +460,7 @@ u    <div class="mx-auto p-6">
             newCatEmoji: '📁',
             newCatColor: '#3B82F6',
             showEmojiPicker: false,
-            emojis: [],
-            
-            init() {
-                // Initialize emoji array
-                this.emojis = ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'];
-                console.log('✅ Edit category form initialized, emoji count:', this.emojis.length);
-            },
+            emojis: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✒️', '🖋️', '🖌️', '🖍️', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📋', '📎', '🖇️', '✂️', '🗃️', '🗄️', '🗑️'],
             
             selectEmoji(emoji) {
                 this.newCatEmoji = emoji;

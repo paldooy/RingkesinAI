@@ -23,6 +23,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register/send-otp', [AuthController::class, 'sendRegisterOtp'])->name('register.send-otp');
     Route::post('/register', [AuthController::class, 'register']);
 });
 
@@ -34,6 +35,7 @@ Route::middleware('auth')->group(function () {
     // Notes
     Route::resource('notes', NotesController::class);
     Route::get('/notes/{note}/export-pdf', [NotesController::class, 'exportPdf'])->name('notes.export-pdf');
+    Route::get('/notes/{note}/resummarize', [NotesController::class, 'resimmarize'])->name('notes.resummarize');
     
     // Note Sharing
     Route::post('/notes/{note}/generate-share', [NotesController::class, 'generateShareCode'])->name('notes.generate-share');
@@ -56,6 +58,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    Route::post('/profile/email/request', [ProfileController::class, 'requestEmailChange'])->name('profile.email.request');
+    Route::post('/profile/email/verify', [ProfileController::class, 'verifyEmailChange'])->name('profile.email.verify');
     
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');

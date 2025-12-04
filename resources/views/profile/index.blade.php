@@ -111,18 +111,26 @@
                 @method('PUT')
 
                 <!-- Avatar Upload -->
-                <div x-data="{ imagePreview: '{{ $user->avatar ? asset('storage/' . $user->avatar) : '' }}' }">
+                <div x-data="{ 
+                    imagePreview: '{{ $user->avatar ? asset('storage/' . $user->avatar) : '' }}',
+                    hasAvatar: {{ $user->avatar ? 'true' : 'false' }}
+                }">
                     <label class="block text-sm font-medium text-[#1E293B] mb-3">
                         Foto Profil
                     </label>
                     <div class="flex items-center gap-4">
                         <div class="w-20 h-20 rounded-full bg-[#F9FAFB] border-2 border-[#E5E7EB] flex items-center justify-center text-2xl font-bold overflow-hidden">
-                            <template x-if="imagePreview">
-                                <img :src="imagePreview" alt="Preview" class="w-full h-full object-cover">
-                            </template>
-                            <template x-if="!imagePreview">
-                                <span>{{ strtoupper(substr($user->name, 0, 2)) }}</span>
-                            </template>
+                            <img 
+                                x-show="imagePreview" 
+                                :src="imagePreview" 
+                                alt="Avatar" 
+                                class="w-full h-full object-cover"
+                                x-on:error="imagePreview = ''; hasAvatar = false"
+                            >
+                            <span 
+                                x-show="!imagePreview" 
+                                class="text-[#2C74B3]"
+                            >{{ strtoupper(substr($user->name, 0, 2)) }}</span>
                         </div>
                         <div>
                             <input 
@@ -130,7 +138,7 @@
                                 name="avatar" 
                                 id="avatar"
                                 accept="image/*"
-                                @change="imagePreview = URL.createObjectURL($event.target.files[0])"
+                                @change="if($event.target.files.length > 0) { imagePreview = URL.createObjectURL($event.target.files[0]); hasAvatar = true; }"
                                 class="hidden"
                             />
                             <label for="avatar" class="inline-block bg-[#2C74B3] hover:bg-[#205295] text-white px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm">
@@ -158,19 +166,39 @@
                     />
                 </div>
 
-                <!-- Email -->
-                <div>
-                    <label for="email" class="block text-sm font-medium text-[#1E293B] mb-2">
-                        Email
+                <!-- Email (Display Only - Edit Separately) -->
+                <div x-data>
+                    <label class="block text-sm font-medium text-[#1E293B] mb-2">
+                        Email <span class="text-xs text-gray-500">(untuk mengubah email, klik tombol di bawah)</span>
                     </label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        value="{{ old('email', $user->email) }}"
-                        required
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
-                    />
+                    <div class="flex items-center gap-3">
+                        <input 
+                            type="email" 
+                            value="{{ $user->email }}"
+                            disabled
+                            class="flex-1 px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
+                        <button 
+                            type="button"
+                            @click="$dispatch('open-email-modal')"
+                            class="px-6 py-3 bg-[#2C74B3] hover:bg-[#205295] text-white rounded-xl transition-colors font-medium whitespace-nowrap flex items-center gap-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                            </svg>
+                            Ubah Email
+                        </button>
+                    </div>
+                    <div class="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p class="text-xs text-yellow-800 flex items-start gap-2">
+                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>
+                                <strong>Keamanan Berlapis:</strong> Perubahan email memerlukan verifikasi kode OTP dari email lama dan konfirmasi link dari email baru. Pastikan Anda memiliki akses ke kedua email.
+                            </span>
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Bio -->
@@ -380,7 +408,194 @@
             </div>
         </div>
     </div>
+
+    <!-- Change Email Modal -->
+    <div 
+        x-data="{ 
+            showEmailModal: false,
+            step: 'request',
+            newEmail: '',
+            otpCode: '',
+            verifying: false,
+            error: '',
+            success: ''
+        }"
+        @open-email-modal.window="showEmailModal = true; step = 'request'; error = ''; success = ''"
+        x-show="showEmailModal"
+        x-cloak
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="showEmailModal = false"
+    >
+        <div class="bg-white rounded-2xl max-w-md w-full p-6" @click.stop>
+            <h2 class="text-2xl font-bold text-[#1E293B] mb-2">Ubah Email</h2>
+            <p class="text-sm text-[#1E293B]/60 mb-6">
+                Verifikasi diperlukan untuk keamanan akun Anda
+            </p>
+
+            <!-- Step 1: Request Email Change -->
+            <div x-show="step === 'request'">
+                <form @submit.prevent="
+                    verifying = true;
+                    error = '';
+                    fetch('{{ route('profile.email.request') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ new_email: newEmail })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        verifying = false;
+                        if(data.success) {
+                            step = 'verify';
+                        } else {
+                            error = data.error || 'Terjadi kesalahan';
+                        }
+                    })
+                    .catch(e => {
+                        verifying = false;
+                        error = 'Terjadi kesalahan koneksi';
+                    })
+                " class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-[#1E293B] mb-2">
+                            Email Saat Ini
+                        </label>
+                        <input 
+                            type="email" 
+                            value="{{ $user->email }}"
+                            disabled
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-[#1E293B] mb-2">
+                            Email Baru <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            x-model="newEmail"
+                            required
+                            placeholder="email.baru@example.com"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        />
+                    </div>
+
+                    <div x-show="error" class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-sm" x-text="error"></div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700">
+                        <p class="font-medium mb-1">📧 Proses Verifikasi:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-xs">
+                            <li>Kode OTP akan dikirim ke email BARU yang Anda masukkan</li>
+                            <li>Masukkan kode OTP untuk memverifikasi email tersebut</li>
+                            <li>Email akun Anda akan langsung berubah setelah verifikasi</li>
+                        </ol>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            type="submit"
+                            :disabled="verifying || !newEmail"
+                            class="flex-1 bg-[#2C74B3] hover:bg-[#205295] disabled:bg-gray-300 text-white font-medium py-3 rounded-xl transition-colors"
+                        >
+                            <span x-show="!verifying">Kirim Kode Verifikasi</span>
+                            <span x-show="verifying">Mengirim...</span>
+                        </button>
+                        <button 
+                            type="button"
+                            @click="showEmailModal = false"
+                            class="px-6 border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium py-3 rounded-xl transition-colors"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Verify OTP -->
+            <div x-show="step === 'verify'">
+                <form @submit.prevent="
+                    verifying = true;
+                    error = '';
+                    fetch('{{ route('profile.email.verify') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ 
+                            new_email: newEmail,
+                            otp_code: otpCode 
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        verifying = false;
+                        if(data.success) {
+                            success = data.message;
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            error = data.error || 'Kode OTP tidak valid';
+                        }
+                    })
+                    .catch(e => {
+                        verifying = false;
+                        error = 'Terjadi kesalahan koneksi';
+                    })
+                " class="space-y-4">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-700">
+                        <p class="font-medium mb-1">✅ Kode verifikasi telah dikirim!</p>
+                        <p class="text-xs">
+                            Cek email baru Anda (<span x-text="newEmail"></span>) untuk mendapatkan kode OTP.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-[#1E293B] mb-2">
+                            Kode OTP (dari email baru) <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="otpCode"
+                            required
+                            maxlength="6"
+                            placeholder="000000"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-center text-2xl font-mono tracking-widest"
+                        />
+                        <p class="text-xs text-[#1E293B]/60 mt-2">
+                            Masukkan kode 6 digit yang dikirim ke email baru Anda
+                        </p>
+                    </div>
+
+                    <div x-show="error" class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-sm" x-text="error"></div>
+                    <div x-show="success" class="bg-green-50 border border-green-200 text-green-600 rounded-xl p-3 text-sm" x-text="success"></div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            type="submit"
+                            :disabled="verifying || otpCode.length !== 6"
+                            class="flex-1 bg-[#2C74B3] hover:bg-[#205295] disabled:bg-gray-300 text-white font-medium py-3 rounded-xl transition-colors"
+                        >
+                            <span x-show="!verifying">Verifikasi & Ubah Email</span>
+                            <span x-show="verifying">Memverifikasi...</span>
+                        </button>
+                        <button 
+                            type="button"
+                            @click="step = 'request'; otpCode = ''"
+                            class="px-6 border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium py-3 rounded-xl transition-colors"
+                        >
+                            Kembali
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+
 @endsection
 
 @push('styles')

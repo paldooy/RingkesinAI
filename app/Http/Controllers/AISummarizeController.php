@@ -32,7 +32,20 @@ class AISummarizeController extends Controller
     {
         $categories = Auth::user()->categories;
         
-        return view('summarize.index', compact('categories'));
+        // Check if this is a re-summarize request from session
+        $resummarizeData = null;
+        if (session()->has('resummarize_note_id')) {
+            $resummarizeData = [
+                'note_id' => session('resummarize_note_id'),
+                'content' => session('resummarize_content'),
+                'title' => session('resummarize_title'),
+            ];
+            
+            // Clear session data after retrieving
+            session()->forget(['resummarize_note_id', 'resummarize_content', 'resummarize_title']);
+        }
+        
+        return view('summarize.index', compact('categories', 'resummarizeData'));
     }
 
     /**
@@ -54,7 +67,7 @@ class AISummarizeController extends Controller
 
         // Validation
         $request->validate([
-            'document' => 'required|file|mimes:pdf,doc,docx,txt|max:10240', // 10MB max
+            'document' => 'required|file|mimes:pdf,doc,docx,txt,html,htm|max:10240', // 10MB max
             'instructions' => 'nullable|string', // Changed from array to string (JSON)
         ]);
 
@@ -171,6 +184,14 @@ class AISummarizeController extends Controller
             ]);
 
         } catch (Exception $e) {
+            // Log the error with full details
+            Log::error('Summarize generate error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             // Clean up uploaded file on error
             if (isset($path)) {
                 Storage::disk('public')->delete($path);
@@ -198,6 +219,7 @@ class AISummarizeController extends Controller
             'category_color' => 'nullable|string|max:7',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+            'note_id' => 'nullable|exists:notes,id', // For re-summarize update
         ]);
 
         $fileName = session('ai_file_name', 'Dokumen');
@@ -215,6 +237,7 @@ class AISummarizeController extends Controller
             'has_html' => preg_match('/<[^>]+>/', $rawSummary) ? 'yes' : 'no',
             'tags_count' => count($request->input('tags', [])),
             'create_category' => $request->input('create_category', false),
+            'is_update' => $request->has('note_id'),
         ]);
         
         // Apply sanitization
@@ -249,14 +272,34 @@ class AISummarizeController extends Controller
             ]);
         }
 
-        // Create the note
-        $note = new Note([
-            'title' => $title,
-            'content' => $rawSummary,
-            'category_id' => $categoryId,
-        ]);
-        $note->user_id = Auth::id();
-        $note->save();
+        // Check if this is an update (re-summarize) or new note
+        if ($request->has('note_id')) {
+            // Update existing note
+            $note = Note::where('id', $request->input('note_id'))
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
+            
+            $note->title = $title;
+            $note->content = $rawSummary;
+            if ($categoryId) {
+                $note->category_id = $categoryId;
+            }
+            $note->save();
+            
+            Log::info('Note updated (re-summarize)', [
+                'note_id' => $note->id,
+                'title' => $title,
+            ]);
+        } else {
+            // Create new note
+            $note = new Note([
+                'title' => $title,
+                'content' => $rawSummary,
+                'category_id' => $categoryId,
+            ]);
+            $note->user_id = Auth::id();
+            $note->save();
+        }
 
         // Attach tags if provided
         if ($request->has('tags') && is_array($request->input('tags'))) {

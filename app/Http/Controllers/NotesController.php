@@ -427,5 +427,25 @@ class NotesController extends Controller
         // Use browser's print-to-PDF functionality via JavaScript
         return view('notes.export-pdf', compact('note'));
     }
-}
 
+    /**
+     * Redirect to summarize page with note content for re-summarization
+     */
+    public function resimmarize(Note $note)
+    {
+        // Check authorization
+        if ($note->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Store note content and info in session for re-summarize
+        session([
+            'resummarize_note_id' => $note->id,
+            'resummarize_content' => $note->content,
+            'resummarize_title' => $note->title,
+        ]);
+
+        // Redirect to summarize page
+        return redirect()->route('summarize.index')->with('info', 'Re-summarize dari: ' . $note->title);
+    }
+}
