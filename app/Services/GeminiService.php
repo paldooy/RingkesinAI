@@ -39,22 +39,25 @@ class GeminiService
         $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
         
         try {
-            // Increased timeout for large documents (120 seconds)
-            $response = Http::timeout(120)->post($url, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
+            // Increased timeout for large documents (120 seconds for response, 30 seconds for connection)
+            $response = Http::connectTimeout(30)
+                ->timeout(120)
+                ->retry(2, 100) // Retry 2 times with 100ms delay on connection failures
+                ->post($url, [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt]
+                            ]
                         ]
+                    ],
+                    'generationConfig' => [
+                        'temperature' => 0.7,
+                        'topK' => 40,
+                        'topP' => 0.95,
+                        'maxOutputTokens' => 12000, // Updated to 12000 as requested
                     ]
-                ],
-                'generationConfig' => [
-                    'temperature' => 0.7,
-                    'topK' => 40,
-                    'topP' => 0.95,
-                    'maxOutputTokens' => 12000, // Updated to 12000 as requested
-                ]
-            ]);
+                ]);
 
             if (!$response->successful()) {
                 return $this->handleError($response);
@@ -130,8 +133,17 @@ class GeminiService
             $userText = implode(' ', array_column($instructions, 'text'));
             $wantsParagraph = (stripos($userText, 'paragraf') !== false || stripos($userText, 'paragraph') !== false);
             $wantsNoBullets = (stripos($userText, 'tanpa poin') !== false || stripos($userText, 'tanpa bullet') !== false || stripos($userText, 'no bullet') !== false);
+            $wantsTable = (stripos($userText, 'tabel') !== false || stripos($userText, 'table') !== false);
             
-            if ($wantsParagraph || $wantsNoBullets) {
+            if ($wantsTable) {
+                $prompt .= "🚨 PENTING: User meminta FORMAT TABEL.\n";
+                $prompt .= "   → WAJIB gunakan format Markdown table dengan | (pipe)\n";
+                $prompt .= "   → Struktur: | Header 1 | Header 2 | Header 3 |\n";
+                $prompt .= "   →          |----------|----------|----------|\n";
+                $prompt .= "   →          | Data 1   | Data 2   | Data 3   |\n";
+                $prompt .= "   → JANGAN gunakan bullet points atau paragraf untuk data yang diminta dalam tabel\n";
+                $prompt .= "   → Setiap baris tabel harus memiliki informasi yang diminta user\n\n";
+            } elseif ($wantsParagraph || $wantsNoBullets) {
                 $prompt .= "🚨 PENTING: User meminta FORMAT PARAGRAF / TANPA POIN-POIN.\n";
                 $prompt .= "   → WAJIB menulis dalam bentuk PARAGRAF penuh\n";
                 $prompt .= "   → DILARANG KERAS menggunakan bullet points (-, *, •) atau numbering (1., 2., 3.)\n";
@@ -143,7 +155,8 @@ class GeminiService
             $prompt .= "   1. Instruksi user di atas adalah HUKUM yang tidak boleh dilanggar\n";
             $prompt .= "   2. Jika dokumen panjang, TETAP ikuti format yang diminta user\n";
             $prompt .= "   3. Jika ada konflik antara efisiensi vs instruksi user → pilih instruksi user\n";
-            $prompt .= "   4. JANGAN gunakan format default AI jika user sudah spesifikasi format\n\n";
+            $prompt .= "   4. JANGAN gunakan format default AI jika user sudah spesifikasi format\n";
+            $prompt .= "   5. KHUSUS untuk tabel: Abaikan semua aturan tentang bullet points, gunakan Markdown table\n\n";
             
         } else {
             // AUTO MODE: Default summarization

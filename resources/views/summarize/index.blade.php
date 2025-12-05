@@ -396,7 +396,7 @@
                                                  x-cloak
                                                  class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
                                                 <div class="grid grid-cols-8 gap-1">
-                                                    <template x-for="emoji in emojiList" :key="emoji">
+                                                    <template x-for="emoji in emojis" :key="emoji">
                                                         <button 
                                                             type="button"
                                                             @click="newCategoryEmoji = emoji; showEmojiPicker = false"
@@ -516,12 +516,18 @@ function aiSummarize() {
         tags: [],
         tagInput: '',
         
+        // Re-summarize data
+        isResummarize: {{ isset($resummarizeData) ? 'true' : 'false' }},
+        resummarizeNoteId: {{ isset($resummarizeData) ? $resummarizeData['note_id'] : 'null' }},
+        resummarizeContent: @json(isset($resummarizeData) ? $resummarizeData['content'] : null),
+        resummarizeTitle: @json(isset($resummarizeData) ? $resummarizeData['title'] : null),
+        
         // New category fields
         newCategoryName: '',
         newCategoryEmoji: '📁',
         newCategoryColor: '#3B82F6',
         showEmojiPicker: false,
-        emojiList: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'],
+        emojis: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✒️', '🖋️', '🖌️', '🖍️', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📋', '📎', '🖇️', '✂️', '🗃️', '🗄️', '🗑️'],
         
         // Revision state
         revisionInstruction: '',
@@ -529,6 +535,30 @@ function aiSummarize() {
         revisionError: null,
         revisionSuccess: false,
         originalFileContent: null, // Store original content for revisions
+
+        init() {
+            // If this is a re-summarize request, auto-load the content
+            if (this.isResummarize && this.resummarizeContent) {
+                this.uploadedFile = {
+                    name: this.resummarizeTitle + ' (Re-summarize)',
+                    size: this.resummarizeContent.length,
+                    type: 'text/html'
+                };
+                this.fileSize = this.formatFileSize(this.resummarizeContent.length);
+                this.originalFileContent = this.resummarizeContent;
+                
+                // Show info message
+                this.$nextTick(() => {
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 mb-6';
+                    infoDiv.innerHTML = '📝 Mode Re-summarize: "' + this.resummarizeTitle + '". Berikan instruksi baru untuk mengubah ringkasan.';
+                    const container = document.querySelector('.max-w-5xl');
+                    if (container && container.children[1]) {
+                        container.insertBefore(infoDiv, container.children[1]);
+                    }
+                });
+            }
+        },
 
         formatMarkdown(text) {
             if (!text) return '';
@@ -608,7 +638,16 @@ function aiSummarize() {
 
             this.isLoading = true;
             const formData = new FormData();
-            formData.append('document', this.uploadedFile);
+            
+            // If re-summarize mode, send content directly instead of file
+            if (this.isResummarize && this.resummarizeContent) {
+                // Create a blob from the content to simulate file upload
+                const blob = new Blob([this.resummarizeContent], { type: 'text/html' });
+                const file = new File([blob], this.resummarizeTitle + '.html', { type: 'text/html' });
+                formData.append('document', file);
+            } else {
+                formData.append('document', this.uploadedFile);
+            }
             
             // Extract user instructions from chat messages
             const instructions = this.chatMessages
@@ -694,10 +733,12 @@ function aiSummarize() {
             }
 
             try {
-                const title = this.noteTitle || ('Ringkasan: ' + this.uploadedFile.name);
+                const title = this.noteTitle || (this.isResummarize ? this.resummarizeTitle : ('Ringkasan: ' + this.uploadedFile.name));
                 
                 // Debug: log content info before saving
                 console.log('💾 Saving summary:', {
+                    isResummarize: this.isResummarize,
+                    noteId: this.resummarizeNoteId,
                     length: this.summary.length,
                     firstChars: this.summary.substring(0, 100),
                     hasHTML: /<[^>]+>/.test(this.summary),
@@ -711,6 +752,11 @@ function aiSummarize() {
                     title: title,
                     tags: this.tags
                 };
+                
+                // If re-summarize mode, include note ID for update
+                if (this.isResummarize && this.resummarizeNoteId) {
+                    requestBody.note_id = this.resummarizeNoteId;
+                }
 
                 // If creating new category, include category data
                 if (this.selectedCategory === 'new') {

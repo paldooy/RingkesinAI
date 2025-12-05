@@ -156,7 +156,7 @@ u    <div class="mx-auto p-6">
                                         <div x-show="showEmojiPicker" 
                                              @click.away="showEmojiPicker = false"
                                              x-cloak
-                                             class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
+                                             class="absolute z-[100] mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
                                             <div class="grid grid-cols-8 gap-1">
                                                 <template x-for="emoji in emojis" :key="emoji">
                                                     <button 
@@ -448,37 +448,29 @@ u    <div class="mx-auto p-6">
 </style>
 @endpush
 
+@endsection
+
 @push('scripts')
 <script>
     // Alpine.js component for edit form
-    Alpine.data('categoryFormEdit', () => ({
-        selectedCat: '{{ old('category_id', $note->category_id) }}',
-        newCatName: '',
-        newCatEmoji: '📁',
-        newCatColor: '#3B82F6',
-        showEmojiPicker: false,
-        emojis: [],
-        
-        init() {
-            // Initialize emoji array
-            this.emojis = ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'];
-            console.log('Edit form emoji count:', this.emojis.length);
-        },
-        
-        selectEmoji(emoji) {
-            this.newCatEmoji = emoji;
-            this.showEmojiPicker = false;
-            console.log('✅ Emoji selected:', emoji);
-            console.log('📊 Current state - showEmojiPicker:', this.showEmojiPicker, 'newCatEmoji:', this.newCatEmoji);
-        },
-        
-        toggleEmojiPicker() {
-            this.showEmojiPicker = !this.showEmojiPicker;
-            console.log('🔄 Emoji picker toggled:', this.showEmojiPicker);
-            console.log('📋 Available emojis:', this.emojis.length);
-        }
-    }));
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('categoryFormEdit', () => ({
+            selectedCat: '{{ old('category_id', $note->category_id) }}',
+            newCatName: '',
+            newCatEmoji: '📁',
+            newCatColor: '#3B82F6',
+            showEmojiPicker: false,
+            emojis: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✒️', '🖋️', '🖌️', '🖍️', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📋', '📎', '🖇️', '✂️', '🗃️', '🗄️', '🗑️'],
+            
+            selectEmoji(emoji) {
+                this.newCatEmoji = emoji;
+                this.showEmojiPicker = false;
+            },
+            
+            toggleEmojiPicker() {
+                this.showEmojiPicker = !this.showEmojiPicker;
+            }
+        }));
+    });
 </script>
 @endpush
-
-@endsection

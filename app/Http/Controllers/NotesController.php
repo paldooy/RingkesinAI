@@ -254,4 +254,198 @@ class NotesController extends Controller
 
         return back()->with('success', 'Catatan berhasil dibagikan!');
     }
+
+    /**
+     * Generate share code for a note
+     */
+    public function generateShareCode(Request $request, Note $note)
+    {
+        // Check authorization
+        if ($note->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'expires_in' => 'required|in:1hour,1day,7days,30days,never',
+        ]);
+
+        // Calculate expiration time
+        $expiresAt = match($request->expires_in) {
+            '1hour' => now()->addHour(),
+            '1day' => now()->addDay(),
+            '7days' => now()->addDays(7),
+            '30days' => now()->addDays(30),
+            'never' => null,
+        };
+
+        // Create or update share
+        $share = NoteShare::updateOrCreate(
+            ['note_id' => $note->id],
+            [
+                'share_code' => NoteShare::generateUniqueCode(),
+                'expires_at' => $expiresAt,
+                'view_count' => 0,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'share_code' => $share->share_code,
+            'share_url' => route('notes.import.show', $share->share_code),
+            'expires_at' => $share->expires_at?->format('d M Y H:i'),
+        ]);
+    }
+
+    /**
+     * Show import page with share code
+     */
+    public function showImport(string $code)
+    {
+        $share = NoteShare::findValidByCode($code);
+
+        if (!$share) {
+            return redirect()->route('notes.index')
+                ->with('error', 'Kode share tidak valid atau sudah kadaluarsa.');
+        }
+
+        // Increment view count
+        $share->incrementViewCount();
+
+        $categories = Auth::check() 
+            ? Category::where('user_id', Auth::id())->get()
+            : collect();
+
+        return view('notes.import', [
+            'note' => $share->note,
+            'share' => $share,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Import note from share code
+     */
+    public function importNote(Request $request, string $code)
+    {
+        $share = NoteShare::findValidByCode($code);
+
+        if (!$share) {
+            return back()->with('error', 'Kode share tidak valid atau sudah kadaluarsa.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'category_id' => 'nullable|string',
+            'new_category_name' => 'nullable|string|max:100',
+            'new_category_icon' => 'nullable|string|max:10',
+            'new_category_color' => 'nullable|string|max:7',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        // Handle category: create new or use existing
+        $categoryId = $request->category_id;
+        
+        if ($request->category_id === 'new') {
+            // Validate new category name is required
+            if (empty($request->new_category_name)) {
+                return back()->withErrors(['new_category_name' => 'Nama kategori baru wajib diisi'])->withInput();
+            }
+            
+            // Create new category
+            $category = Category::create([
+                'user_id' => Auth::id(),
+                'name' => $request->new_category_name,
+                'icon' => $request->new_category_icon ?? '📁',
+                'color' => $request->new_category_color ?? '#3B82F6',
+            ]);
+            $categoryId = $category->id;
+        } elseif (empty($categoryId)) {
+            $categoryId = null;
+        }
+
+        // Create new note for current user
+        $note = Note::create([
+            'user_id' => Auth::id(),
+            'title' => $request->title,
+            'content' => $share->note->content,
+            'summary' => $share->note->summary,
+            'category_id' => $categoryId,
+            'emoji' => $share->note->emoji ?? '📝',
+            'color' => $share->note->color ?? '#3B82F6',
+        ]);
+
+        // Handle tags
+        if ($request->has('tags') && is_array($request->tags)) {
+            $tagIds = [];
+            foreach ($request->tags as $tagName) {
+                $tag = Tag::firstOrCreate(
+                    ['name' => trim($tagName)],
+                    ['color' => sprintf('#%06X', mt_rand(0, 0xFFFFFF))]
+                );
+                $tagIds[] = $tag->id;
+            }
+            $note->tags()->sync($tagIds);
+        }
+
+        return redirect()->route('notes.show', $note)
+            ->with('success', 'Catatan berhasil diimport!');
+    }
+
+    /**
+     * Show import form (manual code entry)
+     */
+    public function importForm()
+    {
+        return view('notes.import-form');
+    }
+
+    /**
+     * Process manual code entry
+     */
+    public function processImportCode(Request $request)
+    {
+        $request->validate([
+            'share_code' => 'required|string|size:6',
+        ]);
+
+        $code = strtoupper($request->share_code);
+        
+        return redirect()->route('notes.import.show', $code);
+    }
+
+    /**
+     * Export note as PDF
+     */
+    public function exportPdf(Note $note)
+    {
+        // Check authorization
+        if ($note->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Use browser's print-to-PDF functionality via JavaScript
+        return view('notes.export-pdf', compact('note'));
+    }
+
+    /**
+     * Redirect to summarize page with note content for re-summarization
+     */
+    public function resimmarize(Note $note)
+    {
+        // Check authorization
+        if ($note->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Store note content and info in session for re-summarize
+        session([
+            'resummarize_note_id' => $note->id,
+            'resummarize_content' => $note->content,
+            'resummarize_title' => $note->title,
+        ]);
+
+        // Redirect to summarize page
+        return redirect()->route('summarize.index')->with('info', 'Re-summarize dari: ' . $note->title);
+    }
 }
