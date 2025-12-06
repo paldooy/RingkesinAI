@@ -33,11 +33,21 @@ class NotesController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        // Apply favorite filter
+        if ($request->filled('favorite') && $request->favorite == '1') {
+            $query->where('is_favorite', true);
+        }
+
         $notes = $query->latest()->paginate(12);
 
         $categories = Category::where('user_id', Auth::id())->get();
+        
+        // Count favorite notes
+        $favoritesCount = Note::where('user_id', Auth::id())
+            ->where('is_favorite', true)
+            ->count();
 
-        return view('notes.index', compact('notes', 'categories'));
+        return view('notes.index', compact('notes', 'categories', 'favoritesCount'));
     }
 
     /**
@@ -218,6 +228,44 @@ class NotesController extends Controller
         $note->delete();
 
         return redirect()->route('notes.index')->with('success', 'Catatan berhasil dihapus!');
+    }
+
+    /**
+     * Bulk delete notes
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'note_ids' => 'required|array',
+            'note_ids.*' => 'exists:notes,id'
+        ]);
+
+        // Delete only user's own notes
+        $deleted = Note::where('user_id', Auth::id())
+            ->whereIn('id', $request->note_ids)
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => $deleted . ' catatan berhasil dihapus!',
+            'deleted_count' => $deleted
+        ]);
+    }
+
+    /**
+     * Toggle favorite status
+     */
+    public function toggleFavorite($id)
+    {
+        $note = Note::where('user_id', Auth::id())->findOrFail($id);
+        $note->is_favorite = !$note->is_favorite;
+        $note->save();
+
+        return response()->json([
+            'success' => true,
+            'is_favorite' => $note->is_favorite,
+            'message' => $note->is_favorite ? 'Ditambahkan ke favorit!' : 'Dihapus dari favorit!'
+        ]);
     }
 
     /**

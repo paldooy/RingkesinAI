@@ -3,7 +3,124 @@
 @section('title', 'Catatan - Ringkesin')
 
 @section('content')
-<div class="flex-1 bg-[#F9FAFB] overflow-auto" x-data="{ viewMode: 'grid' }">
+<div class="flex-1 bg-[#F9FAFB] overflow-auto" x-data="{ 
+    viewMode: 'grid',
+    selectedNotes: [],
+    selectAll: false,
+    showDeleteModal: false,
+    favoritesCount: {{ $favoritesCount }},
+    
+    toggleSelectAll() {
+        this.selectAll = !this.selectAll;
+        if (this.selectAll) {
+            this.selectedNotes = Array.from(document.querySelectorAll('.note-checkbox')).map(cb => parseInt(cb.value));
+        } else {
+            this.selectedNotes = [];
+        }
+    },
+    
+    toggleNote(noteId) {
+        const index = this.selectedNotes.indexOf(noteId);
+        if (index > -1) {
+            this.selectedNotes.splice(index, 1);
+        } else {
+            this.selectedNotes.push(noteId);
+        }
+        this.selectAll = this.selectedNotes.length === document.querySelectorAll('.note-checkbox').length;
+    },
+    
+    async bulkDelete() {
+        if (this.selectedNotes.length === 0) return;
+        
+        try {
+            const response = await fetch('{{ route('notes.bulk-delete') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                },
+                body: JSON.stringify({ note_ids: this.selectedNotes })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Remove deleted notes from DOM
+                this.selectedNotes.forEach(id => {
+                    document.querySelector(`[data-note-id='${id}']`)?.remove();
+                });
+                
+                // Reset selection
+                this.selectedNotes = [];
+                this.selectAll = false;
+                this.showDeleteModal = false;
+                
+                // Show success message
+                alert(data.message);
+                
+                // Reload if no notes left
+                if (document.querySelectorAll('[data-note-id]').length === 0) {
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            alert('Terjadi kesalahan saat menghapus catatan');
+            console.error(error);
+        }
+    },
+    
+    async toggleFavorite(noteId, event) {
+        event.stopPropagation();
+        
+        try {
+            const response = await fetch(`/notes/${noteId}/toggle-favorite`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update icon
+                const icon = event.target.closest('button').querySelector('svg');
+                if (data.is_favorite) {
+                    icon.classList.remove('text-gray-400');
+                    icon.classList.add('text-yellow-500', 'fill-yellow-500');
+                    icon.setAttribute('fill', 'currentColor');
+                    this.favoritesCount++;
+                } else {
+                    icon.classList.add('text-gray-400');
+                    icon.classList.remove('text-yellow-500', 'fill-yellow-500');
+                    icon.setAttribute('fill', 'none');
+                    this.favoritesCount--;
+                    
+                    // If on favorite filter, remove the note from view
+                    if (new URLSearchParams(window.location.search).get('favorite') === '1') {
+                        document.querySelector(`[data-note-id='${noteId}']`)?.remove();
+                        
+                        // Check if this was the last favorite note
+                        const remainingNotes = document.querySelectorAll('[data-note-id]').length;
+                        
+                        if (remainingNotes === 0 || this.favoritesCount === 0) {
+                            // Redirect to All category
+                            window.location.href = '{{ route('notes.index') }}';
+                            return;
+                        }
+                    }
+                }
+                
+                // Show toast
+                showToast(data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            showToast('Terjadi kesalahan', 'error');
+        }
+    }
+}">
     <div class="max-w-7xl mx-auto p-8">
         <!-- Header -->
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
@@ -20,6 +137,33 @@
                 </svg>
                 Buat Catatan
             </a>
+        </div>
+
+        <!-- Bulk Actions Bar -->
+        <div x-show="selectedNotes.length > 0" 
+             x-transition
+             class="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="font-medium text-purple-900">
+                    <span x-text="selectedNotes.length"></span> catatan dipilih
+                </span>
+            </div>
+            <div class="flex gap-2">
+                <button @click="selectedNotes = []; selectAll = false" 
+                        class="px-4 py-2 text-purple-700 hover:bg-purple-100 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button @click="showDeleteModal = true" 
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    Hapus Terpilih
+                </button>
+            </div>
         </div>
 
         <!-- Search and Filters -->
@@ -71,9 +215,30 @@
             <!-- Category Filter Pills -->
             <div class="flex flex-wrap gap-2 mt-4">
                 <a href="{{ route('notes.index') }}" 
-                   class="px-4 py-2 {{ !request('category_id') ? 'bg-[#2C74B3] text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100' }} rounded-full text-sm font-medium transition-colors">
+                   class="px-4 py-2 {{ !request('category_id') && !request('favorite') ? 'bg-[#2C74B3] text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100' }} rounded-full text-sm font-medium transition-colors">
                     Semua
                 </a>
+                
+                @if($favoritesCount > 0)
+                    <a href="{{ route('notes.index', ['favorite' => '1']) }}" 
+                       x-show="favoritesCount > 0"
+                       class="px-4 py-2 {{ request('favorite') == '1' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' }} rounded-full text-sm font-medium transition-colors flex items-center gap-1">
+                        <svg class="w-4 h-4 {{ request('favorite') == '1' ? 'fill-white' : 'fill-yellow-500' }}" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        Favorit (<span x-text="favoritesCount"></span>)
+                    </a>
+                @else
+                    <a href="{{ route('notes.index', ['favorite' => '1']) }}" 
+                       x-show="favoritesCount > 0"
+                       x-cloak
+                       class="px-4 py-2 {{ request('favorite') == '1' ? 'bg-yellow-500 text-white' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' }} rounded-full text-sm font-medium transition-colors flex items-center gap-1">
+                        <svg class="w-4 h-4 {{ request('favorite') == '1' ? 'fill-white' : 'fill-yellow-500' }}" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        Favorit (<span x-text="favoritesCount"></span>)
+                    </a>
+                @endif
                 @foreach($categories as $cat)
                     @php
                         $color = $cat->color;
@@ -103,6 +268,19 @@
 
         <!-- Grid View -->
         <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Select All Checkbox -->
+            <div class="col-span-full mb-2">
+                <label class="flex items-center gap-2 cursor-pointer w-fit">
+                    <input 
+                        type="checkbox" 
+                        x-model="selectAll"
+                        @change="toggleSelectAll()"
+                        class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                    />
+                    <span class="text-sm text-gray-600 font-medium">Pilih Semua</span>
+                </label>
+            </div>
+
             @forelse($notes as $note)
                 @php
                     // Get category color and convert to light background
@@ -125,48 +303,77 @@
                 @endphp
                 
                 <div 
-                    class="p-6 rounded-2xl border-2 cursor-pointer group relative overflow-hidden transition-all hover:shadow-xl"
-                    style="background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.1)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.3)' }};"
-                    onclick="window.location='{{ route('notes.show', $note) }}'"
+                    data-note-id="{{ $note->id }}"
+                    class="p-6 rounded-2xl border-2 group relative overflow-hidden transition-all hover:shadow-xl"
+                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-purple-500 bg-purple-50' : ''"
+                    :style="selectedNotes.includes({{ $note->id }}) ? '' : `background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.1)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.3)' }};`"
                 >
-                    <!-- Gradient overlay on hover -->
-                    <div class="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <!-- Checkbox for selection -->
+                    <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+                        <!-- Favorite Star -->
+                        <button 
+                            @click="toggleFavorite({{ $note->id }}, $event)"
+                            class="p-1 hover:scale-110 transition-transform"
+                            title="{{ $note->is_favorite ? 'Hapus dari favorit' : 'Tambah ke favorit' }}"
+                        >
+                            <svg class="w-6 h-6 {{ $note->is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400' }}" 
+                                 fill="{{ $note->is_favorite ? 'currentColor' : 'none' }}" 
+                                 stroke="currentColor" 
+                                 viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                        </button>
+                        
+                        <!-- Checkbox -->
+                        <input 
+                            type="checkbox" 
+                            class="note-checkbox w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                            :checked="selectedNotes.includes({{ $note->id }})"
+                            @click.stop="toggleNote({{ $note->id }})"
+                            value="{{ $note->id }}"
+                        />
+                    </div>
 
-                    <div class="relative z-10">
-                        <div class="flex items-start gap-3 mb-4">
-                            <div class="text-4xl group-hover:scale-110 transition-transform">
-                                {{ $note->category ? $note->category->icon : '📝' }}
+                    <!-- Clickable card area -->
+                    <div class="cursor-pointer" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
+                        <!-- Gradient overlay on hover -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
+                        <div class="relative z-10">
+                            <div class="flex items-start gap-3 mb-4 pr-8">
+                                <div class="text-4xl group-hover:scale-110 transition-transform">
+                                    {{ $note->category ? $note->category->icon : '📝' }}
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-lg text-[#1E293B] mb-2 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
+                                        {{ $note->title }}
+                                    </h3>
+                                    @if($note->category)
+                                        @php
+                                            $catColor = $note->category->color;
+                                            // Handle both hex colors and Tailwind classes
+                                            $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
+                                            $class = str_starts_with($catColor, '#') ? '' : $catColor;
+                                        @endphp
+                                        <span class="inline-block px-3 py-1 text-white text-xs rounded-lg {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                            {{ $note->category->icon }} {{ $note->category->name }}
+                                        </span>
+                                    @else
+                                        <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">
+                                            📝 Tanpa Kategori
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <h3 class="text-lg text-[#1E293B] mb-2 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
-                                    {{ $note->title }}
-                                </h3>
-                                @if($note->category)
-                                    @php
-                                        $color = $note->category->color;
-                                        // Handle both hex colors and Tailwind classes
-                                        $style = str_starts_with($color, '#') ? "background-color: {$color};" : '';
-                                        $class = str_starts_with($color, '#') ? '' : $color;
-                                    @endphp
-                                    <span class="inline-block px-3 py-1 text-white text-xs rounded-lg {{ $class }}" @if($style) style="{{ $style }}" @endif>
-                                        {{ $note->category->icon }} {{ $note->category->name }}
-                                    </span>
-                                @else
-                                    <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">
-                                        📝 Tanpa Kategori
-                                    </span>
-                                @endif
-                            </div>
-                        </div>
 
-                        <p class="text-sm text-[#1E293B]/60 mb-4 line-clamp-3">
-                            {{ $note->excerpt }}
-                        </p>
+                            <p class="text-sm text-[#1E293B]/60 mb-4 line-clamp-3">
+                                {{ $note->excerpt }}
+                            </p>
 
-                        @if($note->tags->count() > 0)
-                            <div class="flex flex-wrap gap-2 mb-4">
-                                @foreach($note->tags as $tag)
-                                    <span class="text-xs px-2 py-1 bg-white/60 text-[#1E293B]/70 rounded-md border border-[#E5E7EB]">
+                            @if($note->tags->count() > 0)
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    @foreach($note->tags as $tag)
+                                        <span class="text-xs px-2 py-1 bg-white/60 text-[#1E293B]/70 rounded-md border border-[#E5E7EB]">
                                         {{ $tag->name }}
                                     </span>
                                 @endforeach
@@ -177,7 +384,7 @@
                             <span class="text-xs text-[#1E293B]/50">{{ $note->created_at->format('d M Y') }}</span>
                             <div class="flex gap-1">
                                 <a href="{{ route('notes.show', $note) }}" 
-                                   onclick="event.stopPropagation()"
+                                   @click.stop
                                    class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]"
                                    title="Lihat">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +393,7 @@
                                     </svg>
                                 </a>
                                 <button 
-                                   onclick="event.stopPropagation(); shareNote('{{ $note->title }}', '{{ $note->excerpt }}', '{{ route('notes.show', $note) }}')"
+                                   @click.stop="shareNote('{{ $note->title }}', '{{ $note->excerpt }}', '{{ route('notes.show', $note) }}')"
                                    class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-green-600"
                                    title="Share">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,18 +401,18 @@
                                     </svg>
                                 </button>
                                 <a href="{{ route('notes.edit', $note) }}" 
-                                   onclick="event.stopPropagation()"
+                                   @click.stop
                                    class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-[#2C74B3]"
                                    title="Edit">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
                                 </a>
-                                <form action="{{ route('notes.destroy', $note) }}" method="POST" onclick="event.stopPropagation()" class="inline">
+                                <form action="{{ route('notes.destroy', $note) }}" method="POST" @click.stop class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" 
-                                            onclick="return confirm('Yakin ingin menghapus catatan ini?')"
+                                            @click.stop="if (!confirm('Yakin ingin menghapus catatan ini?')) $event.preventDefault()"
                                             class="p-2 hover:bg-red-50 rounded-lg transition-colors text-[#1E293B]/60 hover:text-red-600">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -214,6 +421,7 @@
                                 </form>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             @empty
@@ -236,6 +444,19 @@
 
         <!-- List View -->
         <div x-show="viewMode === 'list'" x-cloak class="space-y-4">
+            <!-- Select All Checkbox -->
+            <div class="mb-2">
+                <label class="flex items-center gap-2 cursor-pointer w-fit">
+                    <input 
+                        type="checkbox" 
+                        x-model="selectAll"
+                        @change="toggleSelectAll()"
+                        class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                    />
+                    <span class="text-sm text-gray-600 font-medium">Pilih Semua</span>
+                </label>
+            </div>
+
             @forelse($notes as $note)
                 @php
                     // Get category color and convert to light background for list view
@@ -254,10 +475,38 @@
                     }
                 @endphp
                 
-                <div class="rounded-2xl p-6 hover:shadow-lg transition-shadow border-2 cursor-pointer"
-                     style="background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.05)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.2)' }};"
-                     onclick="window.location='{{ route('notes.show', $note) }}'">
-                    <div class="flex items-start gap-4">
+                <div 
+                    data-note-id="{{ $note->id }}"
+                    class="rounded-2xl p-6 hover:shadow-lg transition-all border-2 relative"
+                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-300' : ''"
+                    :style="selectedNotes.includes({{ $note->id }}) ? '' : `background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.05)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.2)' }};`"
+                >
+                    <!-- Checkbox & Favorite -->
+                    <div class="absolute top-4 left-4 flex items-center gap-2">
+                        <input 
+                            type="checkbox" 
+                            class="note-checkbox w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                            :checked="selectedNotes.includes({{ $note->id }})"
+                            @click.stop="toggleNote({{ $note->id }})"
+                            value="{{ $note->id }}"
+                        />
+                        
+                        <!-- Favorite Star -->
+                        <button 
+                            @click="toggleFavorite({{ $note->id }}, $event)"
+                            class="p-1 hover:scale-110 transition-transform"
+                            title="{{ $note->is_favorite ? 'Hapus dari favorit' : 'Tambah ke favorit' }}"
+                        >
+                            <svg class="w-5 h-5 {{ $note->is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400' }}" 
+                                 fill="{{ $note->is_favorite ? 'currentColor' : 'none' }}" 
+                                 stroke="currentColor" 
+                                 viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="flex items-start gap-4 ml-16 cursor-pointer" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
                         <div class="text-3xl">{{ $note->category ? $note->category->icon : '📝' }}</div>
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-2">
@@ -270,10 +519,10 @@
                             <div class="flex items-center gap-4 text-xs text-[#1E293B]/50">
                                 @if($note->category)
                                     @php
-                                        $color = $note->category->color;
+                                        $catColor = $note->category->color;
                                         // Handle both hex colors and Tailwind classes
-                                        $style = str_starts_with($color, '#') ? "background-color: {$color};" : '';
-                                        $class = str_starts_with($color, '#') ? '' : $color;
+                                        $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
+                                        $class = str_starts_with($catColor, '#') ? '' : $catColor;
                                     @endphp
                                     <span class="px-3 py-1 rounded-lg text-white {{ $class }}" @if($style) style="{{ $style }}" @endif>
                                         {{ $note->category->icon }} {{ $note->category->name }}
@@ -287,7 +536,7 @@
                             </div>
                         </div>
                         <a href="{{ route('notes.show', $note) }}" 
-                           onclick="event.stopPropagation()"
+                           @click.stop
                            class="bg-white hover:bg-[#2C74B3] hover:text-white border border-[#E5E7EB] hover:border-[#2C74B3] text-[#1E293B] font-medium px-4 py-2 rounded-xl transition-colors">
                             Lihat
                         </a>
@@ -316,26 +565,66 @@
             {{ $notes->links() }}
         </div>
     </div>
+
+    <!-- Bulk Delete Confirmation Modal -->
+    <div x-show="showDeleteModal" 
+         x-cloak
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+         @click.self="showDeleteModal = false">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full" @click.stop>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Konfirmasi Hapus</h3>
+                    <p class="text-sm text-gray-600">Tindakan ini tidak dapat dibatalkan</p>
+                </div>
+            </div>
+            
+            <p class="text-gray-700 mb-6">
+                Anda akan menghapus <span class="font-bold text-red-600" x-text="selectedNotes.length"></span> catatan. 
+                Apakah Anda yakin?
+            </p>
+            
+            <div class="flex gap-3 justify-end">
+                <button @click="showDeleteModal = false" 
+                        class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                    Batal
+                </button>
+                <button @click="bulkDelete()" 
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                    Ya, Hapus Semua
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
+    function showToast(message, type = 'success') {
+        const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up`;
+        toast.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
     function shareNote(title, excerpt, url) {
         // Copy link to clipboard
         navigator.clipboard.writeText(url).then(() => {
-            // Show toast notification
-            const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up';
-            toast.innerHTML = `
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                <span>Link berhasil disalin!</span>
-            `;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            showToast('Link berhasil disalin!');
         }).catch(err => {
             alert('Gagal menyalin link');
         });
@@ -359,6 +648,5 @@
     .animate-slide-up {
         animation: slide-up 0.3s ease-out;
     }
-</style>
 </style>
 @endsection

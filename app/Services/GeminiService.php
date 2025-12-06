@@ -4,26 +4,88 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Exception;
 
 class GeminiService
 {
-    private string $apiKey;
+    private array $apiKeys = [];
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com';
 
     public function __construct()
     {
-        $this->apiKey = config('services.gemini.api_key');
+        $this->loadApiKeys();
         $this->model = config('services.gemini.model', 'gemini-2.0-flash-lite');
         
-        if (empty($this->apiKey)) {
-            throw new Exception('GOOGLE_API_KEY belum dikonfigurasi di file .env');
+        if (empty($this->apiKeys)) {
+            throw new Exception('GOOGLE_API_KEY atau GEMINI_API_KEYS belum dikonfigurasi di file .env');
         }
     }
 
     /**
-     * Generate summary from text using Gemini API.
+     * Load API keys from config (supports single key or multiple keys)
+     */
+    private function loadApiKeys(): void
+    {
+        // Check for multiple keys first (comma-separated)
+        $multipleKeys = config('services.gemini.api_keys');
+        
+        if (!empty($multipleKeys)) {
+            $keys = array_map('trim', explode(',', $multipleKeys));
+            $this->apiKeys = array_filter($keys, fn($key) => !empty($key));
+        }
+        
+        // Fallback to single key
+        if (empty($this->apiKeys)) {
+            $singleKey = config('services.gemini.api_key');
+            if (!empty($singleKey)) {
+                $this->apiKeys = [$singleKey];
+            }
+        }
+    }
+
+    /**
+     * Get next available API key (rotation with rate limit tracking)
+     */
+    private function getAvailableApiKey(): ?string
+    {
+        $now = time();
+        
+        foreach ($this->apiKeys as $index => $key) {
+            $cacheKey = 'gemini_rate_limit_' . md5($key);
+            $rateLimitedUntil = Cache::get($cacheKey, 0);
+            
+            // Key is available if not rate limited or rate limit expired
+            if ($rateLimitedUntil < $now) {
+                // Track usage for load balancing (optional)
+                $usageKey = 'gemini_usage_' . md5($key);
+                Cache::increment($usageKey);
+                
+                return $key;
+            }
+        }
+        
+        // All keys are rate limited, return first key anyway (will show error to user)
+        return $this->apiKeys[0] ?? null;
+    }
+
+    /**
+     * Mark API key as rate limited
+     */
+    private function markKeyAsRateLimited(string $apiKey, int $cooldownSeconds = 60): void
+    {
+        $cacheKey = 'gemini_rate_limit_' . md5($apiKey);
+        Cache::put($cacheKey, time() + $cooldownSeconds, $cooldownSeconds);
+        
+        Log::warning('Gemini API key rate limited', [
+            'key_prefix' => substr($apiKey, 0, 10) . '...',
+            'cooldown_seconds' => $cooldownSeconds,
+        ]);
+    }
+
+    /**
+     * Generate summary from text using Gemini API with key rotation.
      *
      * @param string $content
      * @param array $instructions
@@ -35,14 +97,60 @@ class GeminiService
         // Build prompt with instructions
         $prompt = $this->buildPrompt($content, $instructions);
         
+        // Try each API key until success or all fail
+        $lastError = null;
+        $triedKeys = [];
+        
+        foreach ($this->apiKeys as $apiKey) {
+            // Skip if this key is currently rate limited
+            $cacheKey = 'gemini_rate_limit_' . md5($apiKey);
+            if (Cache::get($cacheKey, 0) > time()) {
+                continue;
+            }
+            
+            $triedKeys[] = substr($apiKey, 0, 10) . '...';
+            
+            $result = $this->makeApiRequest($apiKey, $prompt);
+            
+            if ($result['success']) {
+                return $result;
+            }
+            
+            // If rate limited, mark this key and try next
+            if (isset($result['error_code']) && $result['error_code'] === 429) {
+                $this->markKeyAsRateLimited($apiKey, 60);
+                $lastError = $result;
+                continue;
+            }
+            
+            // For other errors, return immediately
+            return $result;
+        }
+        
+        // All keys failed
+        if ($lastError) {
+            $lastError['error'] = '⏱️ Semua API key sedang dalam rate limit. Silakan tunggu 1-2 menit lalu coba lagi. (Tried ' . count($triedKeys) . ' keys)';
+            return $lastError;
+        }
+        
+        return [
+            'success' => false,
+            'error' => 'Tidak ada API key yang tersedia.',
+        ];
+    }
+
+    /**
+     * Make actual API request with specific key
+     */
+    private function makeApiRequest(string $apiKey, string $prompt): array
+    {
         // Prepare API URL
-        $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
+        $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$apiKey}";
         
         try {
             // Increased timeout for large documents (120 seconds for response, 30 seconds for connection)
             $response = Http::connectTimeout(30)
                 ->timeout(120)
-                ->retry(2, 100) // Retry 2 times with 100ms delay on connection failures
                 ->post($url, [
                     'contents' => [
                         [
@@ -55,7 +163,7 @@ class GeminiService
                         'temperature' => 0.7,
                         'topK' => 40,
                         'topP' => 0.95,
-                        'maxOutputTokens' => 12000, // Updated to 12000 as requested
+                        'maxOutputTokens' => 12000,
                     ]
                 ]);
 
