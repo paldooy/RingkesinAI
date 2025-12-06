@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('notes', NotesController::class);
     Route::get('/notes/{note}/export-pdf', [NotesController::class, 'exportPdf'])->name('notes.export-pdf');
     Route::get('/notes/{note}/resummarize', [NotesController::class, 'resimmarize'])->name('notes.resummarize');
+    Route::post('/notes/bulk-delete', [NotesController::class, 'bulkDelete'])->name('notes.bulk-delete');
+    Route::post('/notes/{note}/toggle-favorite', [NotesController::class, 'toggleFavorite'])->name('notes.toggle-favorite');
     
     // Note Sharing
     Route::post('/notes/{note}/generate-share', [NotesController::class, 'generateShareCode'])->name('notes.generate-share');

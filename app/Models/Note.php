@@ -20,6 +20,7 @@ class Note extends Model
         'title',
         'content',
         'excerpt',
+        'is_favorite',
     ];
 
     /**

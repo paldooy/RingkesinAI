@@ -33,6 +33,7 @@ return [
 
     'gemini' => [
         'api_key' => env('GOOGLE_API_KEY'),
+        'api_keys' => env('GEMINI_API_KEYS'), // Multiple keys, comma-separated
         'model' => env('GOOGLE_MODEL', 'gemini-2.0-flash-lite'),
     ],
 
