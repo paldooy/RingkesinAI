@@ -115,7 +115,10 @@ class AISummarizeController extends Controller
             }
 
             $cacheKey = 'summary:' . md5(
-                $fileContent . json_encode($instructions, JSON_UNESCAPED_UNICODE)
+                $fileContent . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
             );
 
             // Check cache first (valid for 1 hour)
@@ -371,7 +374,13 @@ class AISummarizeController extends Controller
             }
 
             // Check cache
-            $cacheKey = 'summary:' . md5($content . json_encode($instructions));
+            $cacheKey = 'summary:' . md5(
+                $content . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+
             
             if (Cache::has($cacheKey)) {
                 $cachedData = Cache::get($cacheKey);
@@ -473,7 +482,13 @@ class AISummarizeController extends Controller
             }
 
             // Check cache first
-            $cacheKey = 'gemini:' . md5($content . json_encode($instructions));
+            $cacheKey = 'gemini:' . md5(
+                $content . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+    
             
             if (Cache::has($cacheKey)) {
                 $cachedData = Cache::get($cacheKey);
