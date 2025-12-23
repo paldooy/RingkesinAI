@@ -45,6 +45,25 @@ class GeminiService
         }
     }
 
+    private function forceUtf8Safe(string $text): string
+    {
+        // Hapus NULL byte
+        $text = str_replace("\x00", '', $text);
+    
+        // Paksa UTF-8
+        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    
+        // Buang karakter control + binary aneh
+        $text = preg_replace('/[^\P{C}\n\t]/u', '', $text);
+    
+        // FINAL FILTER: buang karakter yang masih invalid
+        $text = iconv('UTF-8', 'UTF-8//IGNORE', $text);
+    
+        return trim($text);
+    }
+
+
+    
     /**
      * Get next available API key (rotation with rate limit tracking)
      */
@@ -94,6 +113,14 @@ class GeminiService
      */
     public function generateSummary(string $content, array $instructions = []): array
     {
+        $content = $this->forceUtf8Safe($content);
+
+        foreach ($instructions as &$i) {
+            if (isset($i['text'])) {
+                $i['text'] = $this->forceUtf8Safe($i['text']);
+            }
+        }
+        
         // Build prompt with instructions
         $prompt = $this->buildPrompt($content, $instructions);
         
@@ -149,23 +176,42 @@ class GeminiService
         
         try {
             // Increased timeout for large documents (120 seconds for response, 30 seconds for connection)
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 12000,
+                ]
+            ];
+
+            json_encode($payload, JSON_THROW_ON_ERROR);
+
+            try {
+                json_encode($payload, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                Log::error('JSON encode failed before Gemini request', [
+                    'error' => $e->getMessage(),
+                    'prompt_length' => strlen($prompt),
+                    'utf8_valid' => mb_check_encoding($prompt, 'UTF-8'),
+                ]);
+            
+                return [
+                    'success' => false,
+                    'error' => 'Konten dokumen mengandung karakter tidak valid (UTF-8). Coba file lain atau convert ke PDF text.',
+                ];
+            }
+
             $response = Http::connectTimeout(30)
                 ->timeout(120)
-                ->post($url, [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['text' => $prompt]
-                            ]
-                        ]
-                    ],
-                    'generationConfig' => [
-                        'temperature' => 0.7,
-                        'topK' => 40,
-                        'topP' => 0.95,
-                        'maxOutputTokens' => 12000,
-                    ]
-                ]);
+                ->post($url, $payload);
 
             if (!$response->successful()) {
                 return $this->handleError($response);
