@@ -1,10 +1,6 @@
 {
     "private": true,
     "type": "module",
-    "scripts": {
-        "dev": "vite",
-        "build": "vite build"
-    },
     "devDependencies": {
         "autoprefixer": "^10.4.21",
         "axios": "^1.6.4",
@@ -15,5 +11,22 @@
     },
     "dependencies": {
         "@tailwindcss/cli": "^4.1.16"
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate --ansi"
+        ],
+        "post-create-project-cmd": [
+            "@php artisan key:generate --ansi"
+        ],
+        "vercel-optimize": [
+            "npm run build",
+            "@php artisan cache:clear",
+            "@php artisan route:cache",
+            "@php artisan view:cache"
+        ]
     }
 }

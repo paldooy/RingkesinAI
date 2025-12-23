@@ -121,9 +121,9 @@
         }
     }
 }">
-    <div class="max-w-7xl mx-auto p-8">
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
         <!-- Header -->
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 my-6">
             <div>
                 <h1 class="text-3xl font-bold text-[#1E293B] mb-2">Catatan Saya</h1>
                 <p class="text-sm text-[#1E293B]/60">
@@ -304,19 +304,18 @@
                 
                 <div 
                     data-note-id="{{ $note->id }}"
-                    class="p-6 rounded-2xl border-2 group relative overflow-hidden transition-all hover:shadow-xl"
-                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-purple-500 bg-purple-50' : ''"
-                    :style="selectedNotes.includes({{ $note->id }}) ? '' : `background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.1)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.3)' }};`"
+                    class="rounded-xl p-4 border border-gray-200 group relative hover:shadow-lg transition-all"
+                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-blue-500 border-blue-500' : ''"
+                    :style="selectedNotes.includes({{ $note->id }}) ? '' : 'background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.08)' }};'"
                 >
-                    <!-- Checkbox for selection -->
-                    <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
-                        <!-- Favorite Star -->
+                    <!-- Checkbox & Star -->
+                    <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
                         <button 
                             @click="toggleFavorite({{ $note->id }}, $event)"
                             class="p-1 hover:scale-110 transition-transform"
                             title="{{ $note->is_favorite ? 'Hapus dari favorit' : 'Tambah ke favorit' }}"
                         >
-                            <svg class="w-6 h-6 {{ $note->is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400' }}" 
+                            <svg class="w-5 h-5 {{ $note->is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300' }}" 
                                  fill="{{ $note->is_favorite ? 'currentColor' : 'none' }}" 
                                  stroke="currentColor" 
                                  viewBox="0 0 24 24">
@@ -324,64 +323,62 @@
                             </svg>
                         </button>
                         
-                        <!-- Checkbox -->
                         <input 
                             type="checkbox" 
-                            class="note-checkbox w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                            class="note-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                             :checked="selectedNotes.includes({{ $note->id }})"
                             @click.stop="toggleNote({{ $note->id }})"
                             value="{{ $note->id }}"
                         />
                     </div>
 
-                    <!-- Clickable card area -->
-                    <div class="cursor-pointer" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
-                        <!-- Gradient overlay on hover -->
-                        <div class="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <!-- Clickable card -->
+                    <div class="cursor-pointer pr-16" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
+                        
+                        <!-- Title -->
+                        <h3 class="text-sm sm:text-base font-bold text-[#1E293B] mb-2 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
+                            {{ $note->title }}
+                        </h3>
 
-                        <div class="relative z-10">
-                            <div class="flex items-start gap-3 mb-4 pr-8">
-                                <div class="text-4xl group-hover:scale-110 transition-transform">
-                                    {{ $note->category ? $note->category->icon : '📝' }}
-                                </div>
-                                <div class="flex-1">
-                                    <h3 class="text-lg text-[#1E293B] mb-2 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
-                                        {{ $note->title }}
-                                    </h3>
-                                    @if($note->category)
-                                        @php
-                                            $catColor = $note->category->color;
-                                            // Handle both hex colors and Tailwind classes
-                                            $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
-                                            $class = str_starts_with($catColor, '#') ? '' : $catColor;
-                                        @endphp
-                                        <span class="inline-block px-3 py-1 text-white text-xs rounded-lg {{ $class }}" @if($style) style="{{ $style }}" @endif>
-                                            {{ $note->category->icon }} {{ $note->category->name }}
-                                        </span>
-                                    @else
-                                        <span class="inline-block px-3 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">
-                                            📝 Tanpa Kategori
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
+                        <!-- Preview -->
+                        <p class="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">
+                            {{ $note->excerpt }}
+                        </p>
 
-                            <p class="text-sm text-[#1E293B]/60 mb-4 line-clamp-3">
-                                {{ $note->excerpt }}
-                            </p>
-
-                            @if($note->tags->count() > 0)
-                                <div class="flex flex-wrap gap-2 mb-4">
-                                    @foreach($note->tags as $tag)
-                                        <span class="text-xs px-2 py-1 bg-white/60 text-[#1E293B]/70 rounded-md border border-[#E5E7EB]">
+                        <!-- Tags -->
+                        @if($note->tags->count() > 0)
+                            <div class="flex flex-wrap gap-1.5 mb-3">
+                                @foreach($note->tags as $tag)
+                                    <span class="text-xs px-2 py-0.5 bg-white/60 text-gray-700 rounded-md">
                                         {{ $tag->name }}
                                     </span>
                                 @endforeach
                             </div>
                         @endif
 
-                        <div class="flex items-center justify-between pt-4 border-t border-[#E5E7EB]/50">
-                            <span class="text-xs text-[#1E293B]/50">{{ $note->created_at->format('d M Y') }}</span>
+                        <!-- Footer: Category & Date & Actions -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-gray-200">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                @if($note->category)
+                                    @php
+                                        $catColor = $note->category->color;
+                                        $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
+                                        $class = str_starts_with($catColor, '#') ? '' : $catColor;
+                                    @endphp
+                                    <span class="inline-flex items-center px-2.5 py-1 text-white text-xs font-medium rounded-md {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                        {{ $note->category->name }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-md">
+                                        Tanpa Kategori
+                                    </span>
+                                @endif
+                                
+                                <span class="text-xs text-gray-500">
+                                    {{ $note->created_at->format('d M Y') }}
+                                </span>
+                            </div>
+                            
                             <div class="flex gap-1">
                                 <a href="{{ route('notes.show', $note) }}" 
                                    @click.stop
@@ -443,15 +440,15 @@
         </div>
 
         <!-- List View -->
-        <div x-show="viewMode === 'list'" x-cloak class="space-y-4">
+        <div x-show="viewMode === 'list'" x-cloak class="space-y-3">
             <!-- Select All Checkbox -->
-            <div class="mb-2">
+            <div class="mb-3">
                 <label class="flex items-center gap-2 cursor-pointer w-fit">
                     <input 
                         type="checkbox" 
                         x-model="selectAll"
                         @change="toggleSelectAll()"
-                        class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                        class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                     />
                     <span class="text-sm text-gray-600 font-medium">Pilih Semua</span>
                 </label>
@@ -459,7 +456,6 @@
 
             @forelse($notes as $note)
                 @php
-                    // Get category color and convert to light background for list view
                     $color = $note->category ? $note->category->color : '#94A3B8';
                     
                     if (str_starts_with($color, '#')) {
@@ -467,8 +463,8 @@
                         $r = hexdec(substr($hex, 0, 2));
                         $g = hexdec(substr($hex, 2, 2));
                         $b = hexdec(substr($hex, 4, 2));
-                        $bgColor = "rgba($r, $g, $b, 0.05)";
-                        $borderColor = "rgba($r, $g, $b, 0.2)";
+                        $bgColor = "rgba($r, $g, $b, 0.08)";
+                        $borderColor = "rgba($r, $g, $b, 0.25)";
                     } else {
                         $bgColor = '';
                         $borderColor = '';
@@ -477,27 +473,26 @@
                 
                 <div 
                     data-note-id="{{ $note->id }}"
-                    class="rounded-2xl p-6 hover:shadow-lg transition-all border-2 relative"
-                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-purple-500 bg-purple-50 border-purple-300' : ''"
-                    :style="selectedNotes.includes({{ $note->id }}) ? '' : `background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.05)' }}; border-color: {{ $borderColor ?: 'rgba(148, 163, 184, 0.2)' }};`"
+                    class="rounded-xl p-4 border border-gray-200 group relative hover:shadow-lg transition-all"
+                    :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-blue-500 border-blue-500' : ''"
+                    :style="selectedNotes.includes({{ $note->id }}) ? '' : 'background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.08)' }};'"
                 >
-                    <!-- Checkbox & Favorite -->
-                    <div class="absolute top-4 left-4 flex items-center gap-2">
+                    <!-- Checkbox & Favorite (Left) -->
+                    <div class="absolute top-3 left-3 z-20 flex items-center gap-1.5">
                         <input 
                             type="checkbox" 
-                            class="note-checkbox w-5 h-5 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer"
+                            class="note-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
                             :checked="selectedNotes.includes({{ $note->id }})"
                             @click.stop="toggleNote({{ $note->id }})"
                             value="{{ $note->id }}"
                         />
                         
-                        <!-- Favorite Star -->
                         <button 
                             @click="toggleFavorite({{ $note->id }}, $event)"
-                            class="p-1 hover:scale-110 transition-transform"
+                            class="p-0.5 hover:scale-110 transition-transform"
                             title="{{ $note->is_favorite ? 'Hapus dari favorit' : 'Tambah ke favorit' }}"
                         >
-                            <svg class="w-5 h-5 {{ $note->is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400' }}" 
+                            <svg class="w-4 h-4 {{ $note->is_favorite ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300' }}" 
                                  fill="{{ $note->is_favorite ? 'currentColor' : 'none' }}" 
                                  stroke="currentColor" 
                                  viewBox="0 0 24 24">
@@ -506,41 +501,57 @@
                         </button>
                     </div>
 
-                    <div class="flex items-start gap-4 ml-16 cursor-pointer" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
-                        <div class="text-3xl">{{ $note->category ? $note->category->icon : '📝' }}</div>
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <div class="w-2 h-2 rounded-full bg-[#2C74B3]"></div>
-                                <h3 class="text-lg font-bold text-[#1E293B]">{{ $note->title }}</h3>
-                            </div>
-                            <p class="text-sm text-[#1E293B]/60 mb-3 line-clamp-2">
-                                {{ $note->excerpt }}
-                            </p>
-                            <div class="flex items-center gap-4 text-xs text-[#1E293B]/50">
-                                @if($note->category)
-                                    @php
-                                        $catColor = $note->category->color;
-                                        // Handle both hex colors and Tailwind classes
-                                        $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
-                                        $class = str_starts_with($catColor, '#') ? '' : $catColor;
-                                    @endphp
-                                    <span class="px-3 py-1 rounded-lg text-white {{ $class }}" @if($style) style="{{ $style }}" @endif>
-                                        {{ $note->category->icon }} {{ $note->category->name }}
+                    <!-- Content (Clickable) -->
+                    <div class="cursor-pointer pl-12 pr-12" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
+                        <!-- Title -->
+                        <h3 class="text-sm sm:text-base font-bold text-[#1E293B] mb-1 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
+                            {{ $note->title }}
+                        </h3>
+                        
+                        <!-- Preview -->
+                        <p class="text-xs sm:text-sm text-gray-600 mb-2 line-clamp-1">
+                            {{ $note->excerpt }}
+                        </p>
+
+                        <!-- Tags (if any) -->
+                        @if($note->tags->count() > 0)
+                            <div class="flex flex-wrap gap-1 mb-2">
+                                @foreach($note->tags as $tag)
+                                    <span class="text-xs px-1.5 py-0.5 bg-white/60 text-gray-700 rounded">
+                                        {{ $tag->name }}
                                     </span>
-                                @else
-                                    <span class="px-3 py-1 rounded-lg bg-gray-200 text-gray-600">
-                                        📝 Tanpa Kategori
-                                    </span>
-                                @endif
-                                <span>{{ $note->created_at->format('d M Y • H:i') }}</span>
+                                @endforeach
                             </div>
+                        @endif
+
+                        <!-- Footer: Category & Date -->
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 text-xs">
+                            @if($note->category)
+                                @php
+                                    $catColor = $note->category->color;
+                                    $style = str_starts_with($catColor, '#') ? "background-color: {$catColor};" : '';
+                                    $class = str_starts_with($catColor, '#') ? '' : $catColor;
+                                @endphp
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-white font-medium {{ $class }}" @if($style) style="{{ $style }}" @endif>
+                                    {{ $note->category->name }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-200 text-gray-600 font-medium">
+                                    Tanpa Kategori
+                                </span>
+                            @endif
+                            <span class="text-gray-500">
+                                {{ $note->created_at->format('d M Y • H:i') }}
+                            </span>
                         </div>
-                        <a href="{{ route('notes.show', $note) }}" 
-                           @click.stop
-                           class="bg-white hover:bg-[#2C74B3] hover:text-white border border-[#E5E7EB] hover:border-[#2C74B3] text-[#1E293B] font-medium px-4 py-2 rounded-xl transition-colors">
-                            Lihat
-                        </a>
                     </div>
+
+                    <!-- View Button (Right) -->
+                    <a href="{{ route('notes.show', $note) }}" 
+                       @click.stop
+                       class="absolute top-3 right-3 bg-white hover:bg-[#2C74B3] hover:text-white border border-gray-200 hover:border-[#2C74B3] text-[#1E293B] font-medium px-3 py-1.5 rounded-lg text-xs transition-colors">
+                        Lihat
+                    </a>
                 </div>
             @empty
                 <div class="col-span-full text-center py-20">

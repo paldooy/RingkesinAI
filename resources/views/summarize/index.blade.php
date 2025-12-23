@@ -4,9 +4,9 @@
 
 @section('content')
 <div class="flex-1 bg-[#F9FAFB] overflow-auto">
-    <div class="max-w-5xl mx-auto p-8" x-data="aiSummarize()">
+    <div class="max-w-5xl mx-auto p-4 md:p-8" x-data="aiSummarize()">
         <!-- Header -->
-        <div class="mb-8 text-center">
+        <div class="my-6 text-center">
             <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-2xl mb-4">
                 <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
@@ -155,10 +155,10 @@
         </div>
 
         <!-- Info Cards - Only show when no file uploaded -->
-        <div x-show="!uploadedFile && !summary" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white rounded-2xl p-6 border-2 border-[#E5E7EB]">
-                <h3 class="text-lg text-[#1E293B] mb-3">✨ Fitur AI</h3>
-                <ul class="space-y-2 text-sm text-[#1E293B]/70">
+        <div x-show="!uploadedFile && !summary" class="grid grid-cols-2 gap-2 md:gap-6">
+            <div class="bg-white rounded-lg md:rounded-2xl p-3 md:p-6 border-2 border-[#E5E7EB]">
+                <h3 class="text-sm md:text-lg font-bold text-[#1E293B] mb-3">✨ Fitur AI</h3>
+                <ul class="space-y-2 text-xs text-[#1E293B]/70">
                     <li>• Upload PDF atau Word dokumen</li>
                     <li>• Berikan instruksi khusus via chat</li>
                     <li>• Ekstrak poin-poin penting otomatis</li>
@@ -166,9 +166,9 @@
                 </ul>
             </div>
 
-            <div class="bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-2xl p-6 text-white">
-                <h3 class="text-lg mb-3">💡 Tips Penggunaan</h3>
-                <ul class="space-y-2 text-sm text-white/90">
+            <div class="bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-lg md:rounded-2xl p-3 md:p-6 text-white">
+                <h3 class="text-sm md:text-lg font-bold mb-3">💡 Tips Penggunaan</h3>
+                <ul class="space-y-2 text-xs text-white/90">
                     <li>• Upload file catatan pelajaran kamu</li>
                     <li>• Berikan instruksi spesifik jika perlu</li>
                     <li>• AI akan membaca dan meringkas otomatis</li>
