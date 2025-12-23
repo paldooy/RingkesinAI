@@ -80,6 +80,14 @@ class AISummarizeController extends Controller
 
             // Extract text from file
             $fileContent = $this->fileExtractor->extractText($file);
+
+            // ===== FIX UTF-8 (WAJIB untuk Gemini API) =====
+            $fileContent = iconv('UTF-8', 'UTF-8//IGNORE', $fileContent);
+            $fileContent = mb_convert_encoding($fileContent, 'UTF-8', 'UTF-8');
+            
+            // Hapus karakter non-printable (binary/invisible)
+            $fileContent = preg_replace('/[^\PC\s]/u', '', $fileContent);
+
             
             if (empty($fileContent)) {
                 throw new Exception('File kosong atau tidak dapat dibaca. Pastikan file berisi teks yang valid.');
@@ -106,9 +114,10 @@ class AISummarizeController extends Controller
                 }
             }
 
-            // Generate cache key based on file hash and instructions
-            $cacheKey = 'summary:' . md5($fileContent . json_encode($instructions));
-            
+            $cacheKey = 'summary:' . md5(
+                $fileContent . json_encode($instructions, JSON_UNESCAPED_UNICODE)
+            );
+
             // Check cache first (valid for 1 hour)
             $cachedSummary = Cache::get($cacheKey);
             if ($cachedSummary) {
@@ -349,6 +358,11 @@ class AISummarizeController extends Controller
 
         try {
             $content = $request->input('content');
+
+            $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $content = preg_replace('/[^\PC\s]/u', '', $content);
+
             $instructions = $request->input('instructions');
 
             // Limit content length
@@ -439,6 +453,11 @@ class AISummarizeController extends Controller
 
         try {
             $content = $request->input('content');
+
+            $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $content = preg_replace('/[^\PC\s]/u', '', $content);
+
             $instructionsJson = $request->input('instructions');
             $noteId = $request->input('note_id');
             
