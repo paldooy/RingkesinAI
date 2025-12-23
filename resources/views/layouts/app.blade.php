@@ -20,7 +20,7 @@
         @include('layouts.components.sidebar')
 
         <!-- Main Content -->
-        <div class="flex-1 overflow-auto">
+        <div class="flex-1 overflow-auto pb-20 lg:pb-0">
             @yield('content')
         </div>
     </div>

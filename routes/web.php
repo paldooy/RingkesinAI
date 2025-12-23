@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotesController;
-use App\Http\Controllers\CategoriesController;
+// CategoriesController removed (categories page deleted)
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AISummarizeController;
 
@@ -46,8 +46,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/import/{code}', [NotesController::class, 'showImport'])->name('notes.import.show');
     Route::post('/import/{code}', [NotesController::class, 'importNote'])->name('notes.import.save');
     
-    // Categories
-    Route::resource('categories', CategoriesController::class)->only(['index', 'store', 'update', 'destroy']);
+    // Categories routes removed (page deleted)
     
     // AI Summarize
     Route::get('/summarize', [AISummarizeController::class, 'index'])->name('summarize.index');

@@ -4,9 +4,9 @@
 
 @section('content')
 <div class="flex-1 bg-[#F9FAFB] overflow-auto">
-    <div class="mx-auto p-6">
+    <div class="mx-auto p-4 md:p-8">
         <!-- Header -->
-        <div class="mb-6 max-w-7xl mx-auto">
+        <div class="my-6 max-w-7xl mx-auto">
             <div class="flex items-center gap-2 mb-2">
                 <a href="{{ route('notes.index') }}" class="text-[#1E293B]/60 hover:text-[#2C74B3] transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

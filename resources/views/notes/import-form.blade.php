@@ -4,8 +4,8 @@
 
 @section('content')
 <div class="flex-1 bg-[#F9FAFB] overflow-auto">
-    <div class="max-w-2xl mx-auto p-6 md:p-8">
-        <div class="text-center mb-8">
+    <div class="max-w-2xl mx-auto p-4 md:p-8">
+        <div class="text-center my-6">
             <div class="w-20 h-20 bg-[#2C74B3]/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-10 h-10 text-[#2C74B3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
