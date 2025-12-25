@@ -266,20 +266,21 @@
             </div>
         </div>
 
+        <!-- Select All Checkbox (Outside Grid) -->
+        <div class="mb-4">
+            <label class="flex items-center gap-2 cursor-pointer w-fit">
+                <input 
+                    type="checkbox" 
+                    x-model="selectAll"
+                    @change="toggleSelectAll()"
+                    class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                />
+                <span class="text-sm text-gray-600 font-medium">Pilih Semua</span>
+            </label>
+        </div>
+
         <!-- Grid View -->
-        <div x-show="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Select All Checkbox -->
-            <div class="col-span-full mb-2">
-                <label class="flex items-center gap-2 cursor-pointer w-fit">
-                    <input 
-                        type="checkbox" 
-                        x-model="selectAll"
-                        @change="toggleSelectAll()"
-                        class="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                    />
-                    <span class="text-sm text-gray-600 font-medium">Pilih Semua</span>
-                </label>
-            </div>
+        <div x-show="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
 
             @forelse($notes as $note)
                 @php
@@ -304,7 +305,7 @@
                 
                 <div 
                     data-note-id="{{ $note->id }}"
-                    class="rounded-xl p-4 border border-gray-200 group relative hover:shadow-lg transition-all"
+                    class="rounded-xl p-4 sm:p-5 md:p-4 border border-gray-200 group relative hover:shadow-lg transition-all h-full flex flex-col"
                     :class="selectedNotes.includes({{ $note->id }}) ? 'ring-2 ring-blue-500 border-blue-500' : ''"
                     :style="selectedNotes.includes({{ $note->id }}) ? '' : 'background-color: {{ $bgColor ?: 'rgba(148, 163, 184, 0.08)' }};'"
                 >
