@@ -413,7 +413,7 @@
                         @endif
 
                         <!-- Footer: Category & Date & Actions -->
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-gray-200">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-gray-200">
                             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                                 @if($note->category)
                                     @php
@@ -429,13 +429,9 @@
                                         Tanpa Kategori
                                     </span>
                                 @endif
-                                
-                                <span class="text-xs text-gray-500">
-                                    {{ $note->created_at->format('d M Y') }}
-                                </span>
                             </div>
                             
-                            <div class="flex gap-1">
+                            <div class="flex gap-1 items-center">
                                 <button 
                                    @click.stop="shareNoteId = {{ $note->id }}; showShareModal = true; shareData = null"
                                    class="p-2 hover:bg-white/80 rounded-lg transition-colors text-[#1E293B]/60 hover:text-green-600"
@@ -612,7 +608,7 @@
                                     </button>
                                 </form>
 
-                                <span class="text-gray-500 text-xs ml-2">{{ $note->created_at->format('d M Y • H:i') }}</span>
+                                <span class="text-gray-500 text-xs ml-2">{{ $note->created_at->format('d M Y') }}</span>
                             </div>
                         </div>
                     </div>
