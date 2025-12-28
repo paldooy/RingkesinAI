@@ -277,7 +277,7 @@
                             id="new_password" 
                             name="new_password" 
                             required
-                            autocomplete="new-password"
+                            autocomplete="off"
                             placeholder="Minimal 8 karakter"
                             class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                         />
@@ -314,7 +314,7 @@
                             id="new_password_confirmation" 
                             name="new_password_confirmation" 
                             required
-                            autocomplete="new-password"
+                            autocomplete="off"
                             placeholder="Ketik ulang password baru"
                             class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                         />
