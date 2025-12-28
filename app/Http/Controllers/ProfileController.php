@@ -39,6 +39,10 @@ class ProfileController extends Controller
             'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // 2MB max
         ]);
 
+        // Update name and bio
+        $user->name = $validated['name'];
+        $user->bio = $validated['bio'] ?? null;
+
         // Handle avatar upload
         if ($request->hasFile('avatar')) {
             // Delete old avatar if exists
@@ -50,13 +54,10 @@ class ProfileController extends Controller
             $avatarFile = $request->file('avatar');
             $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
             $path = $avatarFile->storeAs('avatars', $avatarName, 'public');
-            $validated['avatar'] = $path;
-        } else {
-            // Keep existing avatar if no new file uploaded
-            unset($validated['avatar']);
+            $user->avatar = $path;
         }
 
-        $user->update($validated);
+        $user->save();
 
         return back()->with('success', 'Profil berhasil diperbarui!');
     }
