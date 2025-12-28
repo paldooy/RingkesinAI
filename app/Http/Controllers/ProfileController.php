@@ -46,8 +46,14 @@ class ProfileController extends Controller
                 Storage::disk('public')->delete($user->avatar);
             }
 
-            $path = $request->file('avatar')->store('avatars', 'public');
+            // Store new avatar
+            $avatarFile = $request->file('avatar');
+            $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
+            $path = $avatarFile->storeAs('avatars', $avatarName, 'public');
             $validated['avatar'] = $path;
+        } else {
+            // Keep existing avatar if no new file uploaded
+            unset($validated['avatar']);
         }
 
         $user->update($validated);
