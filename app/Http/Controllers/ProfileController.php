@@ -36,27 +36,10 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:500'],
-            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // 2MB max
         ]);
 
-        // Update name and bio
         $user->name = $validated['name'];
         $user->bio = $validated['bio'] ?? null;
-
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-
-            // Store new avatar
-            $avatarFile = $request->file('avatar');
-            $avatarName = time() . '_' . $avatarFile->getClientOriginalName();
-            $path = $avatarFile->storeAs('avatars', $avatarName, 'public');
-            $user->avatar = $path;
-        }
-
         $user->save();
 
         return back()->with('success', 'Profil berhasil diperbarui!');
