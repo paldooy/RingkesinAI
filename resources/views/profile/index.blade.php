@@ -3,14 +3,26 @@
 @section('title', 'Profil - Ringkesin')
 
 @section('content')
-<div class="flex-1 bg-[#F9FAFB] overflow-auto">
+<div class="flex-1 bg-[#F9FAFB] overflow-auto" x-data="{ editMode: false }">
     <div class="max-w-4xl mx-auto p-4 md:p-8">
         <!-- Header -->
-        <div class="my-6 sm:mb-8">
-            <h1 class="text-2xl sm:text-3xl font-bold text-[#1E293B] mb-2">Profil Saya</h1>
-            <p class="text-xs sm:text-sm text-[#1E293B]/60">
-                Kelola informasi akun dan preferensi kamu
-            </p>
+        <div class="flex items-center justify-between my-6 sm:mb-8">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-[#1E293B] mb-2">Profil Saya</h1>
+                <p class="text-xs sm:text-sm text-[#1E293B]/60">
+                    Kelola informasi akun dan preferensi kamu
+                </p>
+            </div>
+            <button 
+                x-show="!editMode"
+                @click="editMode = true"
+                class="bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-colors flex items-center gap-2 text-xs sm:text-sm"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+                Edit Profil
+            </button>
         </div>
 
         @if(session('success'))
@@ -34,17 +46,16 @@
             <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                 <div class="relative flex-shrink-0">
                     <div class="w-20 sm:w-24 h-20 sm:h-24 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center text-3xl sm:text-4xl font-bold">
-                        @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="w-full h-full rounded-full object-cover">
-                        @else
-                            {{ strtoupper(substr($user->name, 0, 2)) }}
-                        @endif
+                        {{ strtoupper(substr($user->name, 0, 2)) }}
                     </div>
                     <div class="absolute -bottom-2 -right-2 w-6 sm:w-8 h-6 sm:h-8 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
                 </div>
                 <div class="flex-1 text-center sm:text-left">
                     <h2 class="text-lg sm:text-2xl font-bold mb-1 sm:mb-2 break-words">{{ $user->name }}</h2>
                     <p class="text-white/80 text-xs sm:text-base break-all">{{ $user->email }}</p>
+                    @if($user->bio)
+                        <p class="text-white/70 text-xs sm:text-sm mt-2">{{ $user->bio }}</p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -81,58 +92,17 @@
         </div>
 
         <!-- Edit Profile Form -->
-        <div class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-[#E5E7EB]">
-            <h2 class="text-lg sm:text-2xl font-bold text-[#1E293B] mb-4 sm:mb-6">Edit Profil</h2>
+        <div x-show="editMode" x-cloak class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-[#E5E7EB] mb-6">
+            <h2 class="text-lg sm:text-2xl font-bold text-[#1E293B] mb-4 sm:mb-6">Edit Informasi Profil</h2>
             
-            <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="space-y-4 sm:space-y-6">
+            <form method="POST" action="{{ route('profile.update') }}" class="space-y-4 sm:space-y-6">
                 @csrf
                 @method('PUT')
-
-                <!-- Avatar Upload -->
-                <div x-data="{ 
-                    imagePreview: '{{ $user->avatar ? asset('storage/' . $user->avatar) : '' }}',
-                    hasAvatar: {{ $user->avatar ? 'true' : 'false' }}
-                }">
-                    <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2 sm:mb-3">
-                        Foto Profil
-                    </label>
-                    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4">
-                        <div class="w-16 sm:w-20 h-16 sm:h-20 rounded-full bg-[#F9FAFB] border-2 border-[#E5E7EB] flex items-center justify-center text-xl sm:text-2xl font-bold overflow-hidden flex-shrink-0">
-                            <img 
-                                x-show="imagePreview" 
-                                :src="imagePreview" 
-                                alt="Avatar" 
-                                class="w-full h-full object-cover"
-                                x-on:error="imagePreview = ''; hasAvatar = false"
-                            >
-                            <span 
-                                x-show="!imagePreview" 
-                                class="text-[#2C74B3]"
-                            >{{ strtoupper(substr($user->name, 0, 2)) }}</span>
-                        </div>
-                        <div class="w-full sm:w-auto flex flex-col items-center sm:items-start">
-                            <input 
-                                type="file" 
-                                name="avatar" 
-                                id="avatar"
-                                accept="image/*"
-                                @change="if($event.target.files.length > 0) { imagePreview = URL.createObjectURL($event.target.files[0]); hasAvatar = true; }"
-                                class="hidden"
-                            />
-                            <label for="avatar" class="inline-block bg-[#2C74B3] hover:bg-[#205295] text-white px-3 sm:px-4 py-2 rounded-lg cursor-pointer transition-colors text-xs sm:text-sm">
-                                Upload Foto
-                            </label>
-                            <p class="text-xs text-[#1E293B]/50 mt-1">
-                                JPG, PNG, max 2MB
-                            </p>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Name -->
                 <div>
                     <label for="name" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
-                        Nama Lengkap
+                        Nama Lengkap <span class="text-red-500">*</span>
                     </label>
                     <input 
                         type="text" 
@@ -144,10 +114,10 @@
                     />
                 </div>
 
-                <!-- Email (Display Only - Edit Separately) -->
-                <div x-data>
+                <!-- Email (Display Only) -->
+                <div>
                     <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
-                        Email <span class="text-xs text-gray-500">(untuk mengubah email, klik tombol di bawah)</span>
+                        Email
                     </label>
                     <div class="flex items-center gap-2 sm:gap-3">
                         <input 
@@ -159,24 +129,15 @@
                         <button 
                             type="button"
                             @click="$dispatch('open-email-modal')"
-                            class="px-3 sm:px-4 py-2 sm:py-3 bg-[#2C74B3] hover:bg-[#205295] text-white rounded-xl transition-colors font-medium whitespace-nowrap flex items-center justify-center gap-2 text-xs sm:text-sm"
+                            class="px-3 sm:px-4 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors font-medium whitespace-nowrap flex items-center justify-center gap-2 text-xs sm:text-sm"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                             </svg>
                             Ubah Email
                         </button>
                     </div>
-                    <div class="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3">
-                        <p class="text-xs text-yellow-800 flex items-start gap-2">
-                            <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            <span>
-                                <strong>Keamanan Berlapis:</strong> Perubahan email memerlukan verifikasi kode OTP dari email lama dan konfirmasi link dari email baru. Pastikan Anda memiliki akses ke kedua email.
-                            </span>
-                        </p>
-                    </div>
+                    <p class="text-xs text-[#1E293B]/50 mt-1">Ubah email memerlukan verifikasi keamanan</p>
                 </div>
 
                 <!-- Bio -->
@@ -194,7 +155,7 @@
                 </div>
 
                 <!-- Submit Button -->
-                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200">
                     <button 
                         type="submit"
                         class="bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
@@ -204,12 +165,13 @@
                         </svg>
                         Simpan Perubahan
                     </button>
-                    <a 
-                        href="{{ route('dashboard') }}"
+                    <button 
+                        type="button"
+                        @click="editMode = false"
                         class="border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors text-sm sm:text-base text-center"
                     >
                         Batal
-                    </a>
+                    </button>
                 </div>
             </form>
         </div>
