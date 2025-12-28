@@ -27,7 +27,13 @@
         <!-- Upload Section -->
         <div class="bg-white rounded-2xl p-6 mb-6 border-2 border-[#A7C7E7] shadow-lg">
             <div x-show="!uploadedFile">
-                <label class="flex flex-col items-center justify-center cursor-pointer group py-4">
+                <label 
+                    class="flex flex-col items-center justify-center cursor-pointer group py-4 transition-all"
+                    :class="isDragging ? 'bg-blue-50 border-2 border-dashed border-blue-400 rounded-xl' : ''"
+                    @dragover="handleDragOver($event)"
+                    @dragleave="handleDragLeave($event)"
+                    @drop="handleDrop($event)"
+                >
                     <input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt"
@@ -515,6 +521,7 @@ function aiSummarize() {
         summaryMetadata: null,
         tags: [],
         tagInput: '',
+        isDragging: false,
         
         // Re-summarize data
         isResummarize: {{ isset($resummarizeData) ? 'true' : 'false' }},
@@ -583,30 +590,57 @@ function aiSummarize() {
         handleFileUpload(event) {
             const file = event.target.files[0];
             if (file) {
-                const validTypes = [
-                    'application/pdf', 
-                    'application/msword', 
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'text/plain'
-                ];
-                const validExtensions = ['.pdf', '.doc', '.docx', '.txt'];
-                const fileName = file.name.toLowerCase();
-                const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-                
-                if (validTypes.includes(file.type) || hasValidExtension) {
-                    // Check file size (max 10MB)
-                    if (file.size > 10 * 1024 * 1024) {
-                        alert('❌ File terlalu besar! Maksimal 10 MB');
-                        return;
-                    }
-                    
-                    this.uploadedFile = file;
-                    this.fileSize = this.formatFileSize(file.size);
-                    this.summary = '';
-                    this.chatMessages = [];
-                } else {
-                    alert('❌ Mohon upload file PDF, DOC, DOCX, atau TXT saja');
+                this.processFile(file);
+            }
+        },
+
+        handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = true;
+        },
+
+        handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = false;
+        },
+
+        handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = false;
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.processFile(files[0]);
+            }
+        },
+
+        processFile(file) {
+            const validTypes = [
+                'application/pdf', 
+                'application/msword', 
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain'
+            ];
+            const validExtensions = ['.pdf', '.doc', '.docx', '.txt'];
+            const fileName = file.name.toLowerCase();
+            const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (validTypes.includes(file.type) || hasValidExtension) {
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('❌ File terlalu besar! Maksimal 10 MB');
+                    return;
                 }
+                
+                this.uploadedFile = file;
+                this.fileSize = this.formatFileSize(file.size);
+                this.summary = '';
+                this.chatMessages = [];
+            } else {
+                alert('❌ Mohon upload file PDF, DOC, DOCX, atau TXT saja');
             }
         },
 
