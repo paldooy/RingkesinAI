@@ -228,10 +228,7 @@
                 </div>
             </div>
             
-            <form method="POST" action="{{ route('profile.password') }}" class="space-y-4 sm:space-y-6" autocomplete="off">
-                <!-- Hidden dummy fields to catch browser autofill/password managers -->
-                <input type="text" name="prevent_autofill_username" id="prevent_autofill_username" autocomplete="username" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;border:0;padding:0;" />
-                <input type="password" name="prevent_autofill_password" autocomplete="current-password" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;border:0;padding:0;" />
+            <form method="POST" action="{{ route('profile.password') }}" class="space-y-4 sm:space-y-6">
                 @csrf
                 @method('PUT')
 
@@ -246,8 +243,9 @@
                             id="current_password" 
                             name="current_password" 
                             required
-                            autocomplete="current-password"
-                            autocorrect="off" autocapitalize="off" spellcheck="false"
+                            autocomplete="off"
+                            readonly
+                            onfocus="this.removeAttribute('readonly');"
                             placeholder="Masukkan password saat ini"
                             class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                         />
@@ -281,9 +279,8 @@
                             id="new_password" 
                             name="new_password" 
                             required
-                            autocomplete="new-password"
-                            autocorrect="off" autocapitalize="off" spellcheck="false"
-                            placeholder="Minimal 8 karakter"
+                            autocomplete="off"                            readonly
+                            onfocus="this.removeAttribute('readonly');"                            placeholder="Minimal 8 karakter"
                             class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                         />
                         <button 
@@ -319,9 +316,8 @@
                             id="new_password_confirmation" 
                             name="new_password_confirmation" 
                             required
-                            autocomplete="new-password"
-                            autocorrect="off" autocapitalize="off" spellcheck="false"
-                            placeholder="Ketik ulang password baru"
+                            autocomplete="off"                            readonly
+                            onfocus="this.removeAttribute('readonly');"                            placeholder="Ketik ulang password baru"
                             class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                         />
                         <button 
@@ -405,7 +401,7 @@
 
             <!-- Step 1: Request Email Change -->
             <div x-show="step === 'request'">
-                <form autocomplete="off" @submit.prevent="
+                <form @submit.prevent="
                     verifying = true;
                     error = '';
                     fetch('{{ route('profile.email.request') }}', {
