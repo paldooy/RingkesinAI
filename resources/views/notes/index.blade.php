@@ -548,7 +548,7 @@
                     </div>
 
                     <!-- Content (Clickable) -->
-                    <div class="cursor-pointer pl-12 pr-16" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
+                    <div class="cursor-pointer pl-12 pr-6 md:pr-12" @click="if (!$event.target.classList.contains('note-checkbox')) { window.location='{{ route('notes.show', $note) }}' }">
                         <!-- Title -->
                         <h3 class="text-sm sm:text-base font-bold text-[#1E293B] mb-1 line-clamp-2 group-hover:text-[#2C74B3] transition-colors">
                             {{ $note->title }}
