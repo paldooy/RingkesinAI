@@ -608,7 +608,11 @@
                                     </button>
                                 </form>
 
-                                <span class="text-gray-500 text-xs ml-2">{{ $note->created_at->format('d M Y') }}</span>
+                            </div>
+
+                            <div class="ml-2 sm:ml-4 text-gray-600 text-xs whitespace-nowrap">
+                                {{ $note->created_at->format('d M Y') }}
+                            </div>
                             </div>
                         </div>
                     </div>
