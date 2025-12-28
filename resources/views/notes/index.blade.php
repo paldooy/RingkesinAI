@@ -450,7 +450,6 @@
                             </div>
                         </div>
                     </div>
-                    </div>
                 </div>
             @empty
                 <div class="col-span-full text-center py-20">
@@ -576,8 +575,6 @@
                             </span>
                         </div>
                     </div>
-
-
                 </div>
             @empty
                 <div class="col-span-full text-center py-20">
@@ -648,7 +645,7 @@
                         <p class="text-xs text-gray-500 mb-1">Kode Share:</p>
                         <div class="flex items-center gap-2">
                             <code class="text-2xl font-bold text-[#2C74B3] tracking-widest" x-text="shareData?.share_code"></code>
-                            <button @click="copyCode()" class="p-2 hover:bg-gray-100 rounded-lg" title="Salin kode">
+                            <button @click.stop="navigator.clipboard.writeText(shareData.share_code).then(() => showToast('Kode berhasil disalin!')).catch(() => showToast('Gagal menyalin kode', 'error'))" class="p-2 hover:bg-gray-100 rounded-lg" title="Salin kode">
                                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                 </svg>
@@ -659,7 +656,7 @@
                         <p class="text-xs text-gray-500 mb-1">Link Share:</p>
                         <div class="flex items-center gap-2">
                             <code class="text-xs text-gray-700 break-all flex-1" x-text="shareData?.share_url"></code>
-                            <button @click="copyLink()" class="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0" title="Salin link">
+                            <button @click.stop="navigator.clipboard.writeText(shareData.share_url).then(() => showToast('Link berhasil disalin!')).catch(() => showToast('Gagal menyalin link', 'error'))" class="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0" title="Salin link">
                                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                                 </svg>
@@ -734,28 +731,6 @@
         setTimeout(() => {
             toast.remove();
         }, 3000);
-    }
-
-    function copyCode() {
-        const codeEl = document.querySelector('code[x-text*="share_code"]');
-        if (codeEl) {
-            navigator.clipboard.writeText(codeEl.textContent).then(() => {
-                showToast('Kode berhasil disalin!');
-            }).catch(err => {
-                showToast('Gagal menyalin kode', 'error');
-            });
-        }
-    }
-
-    function copyLink() {
-        const linkEl = document.querySelector('code[x-text*="share_url"]');
-        if (linkEl) {
-            navigator.clipboard.writeText(linkEl.textContent).then(() => {
-                showToast('Link berhasil disalin!');
-            }).catch(err => {
-                showToast('Gagal menyalin link', 'error');
-            });
-        }
     }
 </script>
 
