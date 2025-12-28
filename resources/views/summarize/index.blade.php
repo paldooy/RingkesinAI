@@ -7,11 +7,6 @@
     <div class="max-w-5xl mx-auto p-4 md:p-8" x-data="aiSummarize()">
         <!-- Header -->
         <div class="my-6 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-2xl mb-4">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                </svg>
-            </div>
             <h1 class="text-3xl font-bold text-[#1E293B] mb-2">AI Summarize Assistant</h1>
             <p class="text-[#1E293B]/60">
                 Upload file PDF atau DOCX, berikan instruksi tambahan, dan biarkan AI meringkas dokumenmu
