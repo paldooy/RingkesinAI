@@ -37,4 +37,8 @@ return [
         'model' => env('GOOGLE_MODEL', 'gemini-2.0-flash-lite'),
     ],
 
+    'resend' => [
+        'key' => env('RESEND_API_KEY'),
+    ],
+
 ];

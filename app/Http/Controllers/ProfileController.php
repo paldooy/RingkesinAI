@@ -36,21 +36,11 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'bio' => ['nullable', 'string', 'max:500'],
-            'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'], // 2MB max
         ]);
 
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
-            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-                Storage::disk('public')->delete($user->avatar);
-            }
-
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $validated['avatar'] = $path;
-        }
-
-        $user->update($validated);
+        $user->name = $validated['name'];
+        $user->bio = $validated['bio'] ?? null;
+        $user->save();
 
         return back()->with('success', 'Profil berhasil diperbarui!');
     }
@@ -84,19 +74,20 @@ class ProfileController extends Controller
         ], now()->addMinutes(15));
 
         try {
-            // Send OTP to NEW email
-            Mail::raw(
-                "Halo {$user->name},\n\n" .
-                "Anda meminta untuk mengubah email akun Ringkesin ke {$newEmail}.\n\n" .
-                "Kode OTP verifikasi Anda adalah: {$otpCode}\n\n" .
-                "Kode ini berlaku selama 15 menit.\n\n" .
-                "Jika Anda tidak meminta perubahan ini, abaikan email ini.\n\n" .
-                "Salam,\nTim Ringkesin",
-                function ($message) use ($newEmail) {
-                    $message->to($newEmail)
-                            ->subject('Kode OTP Verifikasi Email Baru - Ringkesin');
-                }
-            );
+            // Gunakan Resend API (HTTP) untuk mengirim email
+            $resend = \Resend::client(config('services.resend.key'));
+            
+            $resend->emails->send([
+                'from' => config('mail.from.address'),
+                'to' => [$newEmail],
+                'subject' => 'Kode OTP Verifikasi Email Baru - Ringkesin',
+                'text' => "Halo {$user->name},\n\n" .
+                         "Anda meminta untuk mengubah email akun Ringkesin ke {$newEmail}.\n\n" .
+                         "Kode OTP verifikasi Anda adalah: {$otpCode}\n\n" .
+                         "Kode ini berlaku selama 15 menit.\n\n" .
+                         "Jika Anda tidak meminta perubahan ini, abaikan email ini.\n\n" .
+                         "Salam,\nTim Ringkesin",
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -104,9 +95,10 @@ class ProfileController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Resend API Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error' => 'Gagal mengirim email. Pastikan email baru valid.',
+                'error' => 'Gagal mengirim email: ' . $e->getMessage(),
             ], 500);
         }
     }
