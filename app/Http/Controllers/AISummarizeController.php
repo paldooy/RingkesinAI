@@ -32,7 +32,20 @@ class AISummarizeController extends Controller
     {
         $categories = Auth::user()->categories;
         
-        return view('summarize.index', compact('categories'));
+        // Check if this is a re-summarize request from session
+        $resummarizeData = null;
+        if (session()->has('resummarize_note_id')) {
+            $resummarizeData = [
+                'note_id' => session('resummarize_note_id'),
+                'content' => session('resummarize_content'),
+                'title' => session('resummarize_title'),
+            ];
+            
+            // Clear session data after retrieving
+            session()->forget(['resummarize_note_id', 'resummarize_content', 'resummarize_title']);
+        }
+        
+        return view('summarize.index', compact('categories', 'resummarizeData'));
     }
 
     /**
@@ -54,7 +67,7 @@ class AISummarizeController extends Controller
 
         // Validation
         $request->validate([
-            'document' => 'required|file|mimes:pdf,doc,docx,txt|max:10240', // 10MB max
+            'document' => 'required|file|mimes:pdf,doc,docx,txt,html,htm|max:10240', // 10MB max
             'instructions' => 'nullable|string', // Changed from array to string (JSON)
         ]);
 
@@ -67,6 +80,14 @@ class AISummarizeController extends Controller
 
             // Extract text from file
             $fileContent = $this->fileExtractor->extractText($file);
+
+            // ===== FIX UTF-8 (WAJIB untuk Gemini API) =====
+            $fileContent = iconv('UTF-8', 'UTF-8//IGNORE', $fileContent);
+            $fileContent = mb_convert_encoding($fileContent, 'UTF-8', 'UTF-8');
+            
+            // Hapus karakter non-printable (binary/invisible)
+            $fileContent = preg_replace('/[^\PC\s]/u', '', $fileContent);
+
             
             if (empty($fileContent)) {
                 throw new Exception('File kosong atau tidak dapat dibaca. Pastikan file berisi teks yang valid.');
@@ -93,9 +114,13 @@ class AISummarizeController extends Controller
                 }
             }
 
-            // Generate cache key based on file hash and instructions
-            $cacheKey = 'summary:' . md5($fileContent . json_encode($instructions));
-            
+            $cacheKey = 'summary:' . md5(
+                $fileContent . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+
             // Check cache first (valid for 1 hour)
             $cachedSummary = Cache::get($cacheKey);
             if ($cachedSummary) {
@@ -171,6 +196,14 @@ class AISummarizeController extends Controller
             ]);
 
         } catch (Exception $e) {
+            // Log the error with full details
+            Log::error('Summarize generate error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             // Clean up uploaded file on error
             if (isset($path)) {
                 Storage::disk('public')->delete($path);
@@ -198,6 +231,7 @@ class AISummarizeController extends Controller
             'category_color' => 'nullable|string|max:7',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
+            'note_id' => 'nullable|exists:notes,id', // For re-summarize update
         ]);
 
         $fileName = session('ai_file_name', 'Dokumen');
@@ -215,6 +249,7 @@ class AISummarizeController extends Controller
             'has_html' => preg_match('/<[^>]+>/', $rawSummary) ? 'yes' : 'no',
             'tags_count' => count($request->input('tags', [])),
             'create_category' => $request->input('create_category', false),
+            'is_update' => $request->has('note_id'),
         ]);
         
         // Apply sanitization
@@ -249,14 +284,34 @@ class AISummarizeController extends Controller
             ]);
         }
 
-        // Create the note
-        $note = new Note([
-            'title' => $title,
-            'content' => $rawSummary,
-            'category_id' => $categoryId,
-        ]);
-        $note->user_id = Auth::id();
-        $note->save();
+        // Check if this is an update (re-summarize) or new note
+        if ($request->has('note_id')) {
+            // Update existing note
+            $note = Note::where('id', $request->input('note_id'))
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
+            
+            $note->title = $title;
+            $note->content = $rawSummary;
+            if ($categoryId) {
+                $note->category_id = $categoryId;
+            }
+            $note->save();
+            
+            Log::info('Note updated (re-summarize)', [
+                'note_id' => $note->id,
+                'title' => $title,
+            ]);
+        } else {
+            // Create new note
+            $note = new Note([
+                'title' => $title,
+                'content' => $rawSummary,
+                'category_id' => $categoryId,
+            ]);
+            $note->user_id = Auth::id();
+            $note->save();
+        }
 
         // Attach tags if provided
         if ($request->has('tags') && is_array($request->input('tags'))) {
@@ -306,6 +361,11 @@ class AISummarizeController extends Controller
 
         try {
             $content = $request->input('content');
+
+            $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $content = preg_replace('/[^\PC\s]/u', '', $content);
+
             $instructions = $request->input('instructions');
 
             // Limit content length
@@ -314,7 +374,13 @@ class AISummarizeController extends Controller
             }
 
             // Check cache
-            $cacheKey = 'summary:' . md5($content . json_encode($instructions));
+            $cacheKey = 'summary:' . md5(
+                $content . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+
             
             if (Cache::has($cacheKey)) {
                 $cachedData = Cache::get($cacheKey);
@@ -396,6 +462,11 @@ class AISummarizeController extends Controller
 
         try {
             $content = $request->input('content');
+
+            $content = iconv('UTF-8', 'UTF-8//IGNORE', $content);
+            $content = mb_convert_encoding($content, 'UTF-8', 'UTF-8');
+            $content = preg_replace('/[^\PC\s]/u', '', $content);
+
             $instructionsJson = $request->input('instructions');
             $noteId = $request->input('note_id');
             
@@ -411,7 +482,13 @@ class AISummarizeController extends Controller
             }
 
             // Check cache first
-            $cacheKey = 'gemini:' . md5($content . json_encode($instructions));
+            $cacheKey = 'gemini:' . md5(
+                $content . json_encode(
+                    $instructions,
+                    JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_IGNORE
+                )
+            );
+    
             
             if (Cache::has($cacheKey)) {
                 $cachedData = Cache::get($cacheKey);

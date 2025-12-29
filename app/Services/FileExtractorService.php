@@ -24,6 +24,7 @@ class FileExtractorService
             'pdf' => $this->extractFromPdf($file),
             'doc', 'docx' => $this->extractFromWord($file),
             'txt' => $this->extractFromTxt($file),
+            'html', 'htm' => $this->extractFromHtml($file),
             default => throw new Exception("Tipe file tidak didukung: {$extension}")
         };
     }
@@ -200,6 +201,34 @@ class FileExtractorService
             return $this->cleanText($text);
         } catch (Exception $e) {
             throw new Exception("Gagal membaca file TXT: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Extract text from HTML file.
+     *
+     * @param UploadedFile $file
+     * @return string
+     * @throws Exception
+     */
+    private function extractFromHtml(UploadedFile $file): string
+    {
+        try {
+            $html = file_get_contents($file->getRealPath());
+            
+            if ($html === false || empty(trim($html))) {
+                throw new Exception("File HTML kosong atau tidak bisa dibaca");
+            }
+            
+            // Strip HTML tags to get plain text
+            $text = strip_tags($html);
+            
+            // Decode HTML entities
+            $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            
+            return $this->cleanText($text);
+        } catch (Exception $e) {
+            throw new Exception("Gagal membaca file HTML: " . $e->getMessage());
         }
     }
 

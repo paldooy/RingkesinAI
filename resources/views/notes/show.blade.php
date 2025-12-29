@@ -3,7 +3,7 @@
 @section('title', $note->title . ' - Ringkesin')
 
 @section('content')
-<div class="flex-1 bg-[#F9FAFB] overflow-auto">
+<div class="flex-1 bg-[#F9FAFB] overflow-auto" x-data="{ showShareModal: false, shareData: null, isGenerating: false, expiresIn: '1day' }">
     <div class="max-w-6xl mx-auto p-6 md:p-8">
         <!-- Header -->
         <div class="mb-6">
@@ -86,35 +86,35 @@
                     Edit Catatan
                 </a>
 
-                <button 
-                    onclick="window.print()"
+                <a 
+                    href="{{ route('notes.export-pdf', $note) }}"
                     class="border border-[#E5E7EB] hover:bg-white text-[#1E293B] font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/>
                     </svg>
-                    Print
-                </button>
+                    Export PDF
+                </a>
 
                 <button 
-                    onclick="copyToClipboard()"
-                    class="border border-[#E5E7EB] hover:bg-white text-[#1E293B] font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                    @click="showShareModal = true"
+                    class="border border-[#2C74B3] bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
                     </svg>
-                    Salin
+                    Bagikan
                 </button>
 
-                <button 
-                    @click="$store.resummary.open({{ $note->id }}, @js($note->content))"
-                    class="border border-[#2C74B3] hover:bg-[#2C74B3] hover:text-white text-[#2C74B3] font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
+                <a
+                    href="{{ route('notes.resummarize', $note) }}"
+                    class="border border-[#E5E7EB] hover:bg-white text-[#1E293B] font-medium px-6 py-3 rounded-xl transition-colors flex items-center gap-2"
                 >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                     Re-summarize
-                </button>
+                </a>
 
                 <form action="{{ route('notes.destroy', $note) }}" method="POST" class="ml-auto">
                     @csrf
@@ -149,6 +149,98 @@
                     <p class="text-[#1E293B]/60 mb-1">Jumlah Karakter</p>
                     <p class="text-[#1E293B] font-medium">{{ strlen($note->content) }} karakter</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div x-show="showShareModal"
+         x-cloak
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+         @click.self="showShareModal = false">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6" @click.stop>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-[#1E293B]">Bagikan Catatan</h3>
+                <button @click="showShareModal = false" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div x-show="!shareData">
+                <p class="text-sm text-[#1E293B]/60 mb-6">Generate kode untuk membagikan catatan ini. Pengguna lain bisa import catatan ini dengan kode atau link yang Anda bagikan.</p>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-[#1E293B] mb-2">Masa Berlaku</label>
+                    <select x-model="expiresIn" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none">
+                        <option value="1hour">1 Jam</option>
+                        <option value="1day" selected>1 Hari</option>
+                        <option value="7days">7 Hari</option>
+                        <option value="30days">30 Hari</option>
+                        <option value="never">Tanpa Batas</option>
+                    </select>
+                </div>
+
+                <button 
+                    @click="generateShareCode()"
+                    :disabled="isGenerating"
+                    class="w-full bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
+                >
+                    <span x-show="!isGenerating">Generate Kode Share</span>
+                    <span x-show="isGenerating">Generating...</span>
+                </button>
+            </div>
+
+            <div x-show="shareData" x-cloak>
+                <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+                    <p class="text-sm text-green-800 mb-3">✅ Kode share berhasil dibuat!</p>
+                    <div class="bg-white rounded-lg p-4 mb-3">
+                        <p class="text-xs text-gray-500 mb-1">Kode Share:</p>
+                        <div class="flex items-center gap-2">
+                            <code class="text-2xl font-bold text-[#2C74B3] tracking-widest" x-text="shareData?.share_code"></code>
+                            <button @click="copyCode()" class="p-2 hover:bg-gray-100 rounded-lg" title="Salin kode">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg p-4">
+                        <p class="text-xs text-gray-500 mb-1">Link Share:</p>
+                        <div class="flex items-center gap-2">
+                            <code class="text-xs text-gray-700 break-all flex-1" x-text="shareData?.share_url"></code>
+                            <button @click="copyLink()" class="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0" title="Salin link">
+                                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-3" x-show="shareData?.expires_at">
+                        Berlaku hingga: <span x-text="shareData?.expires_at"></span>
+                    </p>
+                    <p class="text-xs text-gray-600 mt-1" x-show="!shareData?.expires_at">
+                        Berlaku tanpa batas waktu
+                    </p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                    <p class="text-sm text-blue-800 font-medium mb-2">📋 Cara Membagikan:</p>
+                    <ol class="text-xs text-blue-700 space-y-1 ml-4 list-decimal">
+                        <li>Salin kode atau link di atas</li>
+                        <li>Kirim ke teman via WA, email, atau platform lainnya</li>
+                        <li>Teman Anda bisa buka link atau input kode di menu "Import Catatan"</li>
+                        <li>Mereka bisa menyimpan catatan ini ke akun mereka sendiri</li>
+                    </ol>
+                </div>
+
+                <button 
+                    @click="shareData = null; showShareModal = false"
+                    class="w-full bg-gray-100 hover:bg-gray-200 text-[#1E293B] font-medium px-6 py-3 rounded-xl transition-colors"
+                >
+                    Tutup
+                </button>
             </div>
         </div>
     </div>
@@ -573,12 +665,120 @@
                     }
                 } catch (error) {
                     console.error('Re-summary error:', error);
-                    this.error = error.message || 'Terjadi kesalahan. Silakan coba lagi.';
-                    this.isLoading = false;
+                    alert('Gagal memproses re-summary: ' + error.message);
                 }
             }
         });
     });
+
+    // Copy share link function
+    function copyShareLink() {
+        const noteUrl = window.location.href;
+        navigator.clipboard.writeText(noteUrl).then(() => {
+            // Show toast notification
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up';
+            toast.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Link berhasil disalin!</span>
+            `;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        });
+    }
+
+    // Generate share code
+    async function generateShareCode() {
+        const alpine = Alpine.$data(document.querySelector('[x-data]'));
+        alpine.isGenerating = true;
+
+        try {
+            const response = await fetch('{{ route('notes.generate-share', $note) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    expires_in: alpine.expiresIn
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alpine.shareData = data;
+            } else {
+                alert('Gagal generate kode share');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Terjadi kesalahan');
+        } finally {
+            alpine.isGenerating = false;
+        }
+    }
+
+    // Copy share code
+    function copyCode() {
+        const alpine = Alpine.$data(document.querySelector('[x-data]'));
+        navigator.clipboard.writeText(alpine.shareData.share_code).then(() => {
+            showToast('Kode berhasil disalin!');
+        });
+    }
+
+    // Copy share link
+    function copyLink() {
+        const alpine = Alpine.$data(document.querySelector('[x-data]'));
+        navigator.clipboard.writeText(alpine.shareData.share_url).then(() => {
+            showToast('Link berhasil disalin!');
+        });
+    }
+
+    // Show toast helper
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 animate-slide-up';
+        toast.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
 </script>
 @endpush
+
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+    
+    @keyframes slide-up {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .animate-slide-up {
+        animation: slide-up 0.3s ease-out;
+    }
+</style>
+@endpush
+
 @endsection

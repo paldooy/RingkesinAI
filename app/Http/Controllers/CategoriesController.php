@@ -14,8 +14,13 @@ class CategoriesController extends Controller
     public function index()
     {
         $categories = Category::where('user_id', Auth::id())->withCount('notes')->get();
+        
+        // Count favorite notes
+        $favoritesCount = \App\Models\Note::where('user_id', Auth::id())
+            ->where('is_favorite', true)
+            ->count();
 
-        return view('categories.index', compact('categories'));
+        return view('categories.index', compact('categories', 'favoritesCount'));
     }
 
     /**

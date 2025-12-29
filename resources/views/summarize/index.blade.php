@@ -4,14 +4,9 @@
 
 @section('content')
 <div class="flex-1 bg-[#F9FAFB] overflow-auto">
-    <div class="max-w-5xl mx-auto p-8" x-data="aiSummarize()">
+    <div class="max-w-5xl mx-auto p-4 md:p-8" x-data="aiSummarize()">
         <!-- Header -->
-        <div class="mb-8 text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-2xl mb-4">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                </svg>
-            </div>
+        <div class="my-6 text-center">
             <h1 class="text-3xl font-bold text-[#1E293B] mb-2">AI Summarize Assistant</h1>
             <p class="text-[#1E293B]/60">
                 Upload file PDF atau DOCX, berikan instruksi tambahan, dan biarkan AI meringkas dokumenmu
@@ -27,7 +22,13 @@
         <!-- Upload Section -->
         <div class="bg-white rounded-2xl p-6 mb-6 border-2 border-[#A7C7E7] shadow-lg">
             <div x-show="!uploadedFile">
-                <label class="flex flex-col items-center justify-center cursor-pointer group py-4">
+                <label 
+                    class="flex flex-col items-center justify-center cursor-pointer group py-4 transition-all"
+                    :class="isDragging ? 'bg-blue-50 border-2 border-dashed border-blue-400 rounded-xl' : ''"
+                    @dragover="handleDragOver($event)"
+                    @dragleave="handleDragLeave($event)"
+                    @drop="handleDrop($event)"
+                >
                     <input
                         type="file"
                         accept=".pdf,.doc,.docx,.txt"
@@ -155,10 +156,10 @@
         </div>
 
         <!-- Info Cards - Only show when no file uploaded -->
-        <div x-show="!uploadedFile && !summary" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white rounded-2xl p-6 border-2 border-[#E5E7EB]">
-                <h3 class="text-lg text-[#1E293B] mb-3">✨ Fitur AI</h3>
-                <ul class="space-y-2 text-sm text-[#1E293B]/70">
+        <div x-show="!uploadedFile && !summary" class="grid grid-cols-2 gap-2 md:gap-6">
+            <div class="bg-white rounded-lg md:rounded-2xl p-3 md:p-6 border-2 border-[#E5E7EB]">
+                <h3 class="text-sm md:text-lg font-bold text-[#1E293B] mb-3">✨ Fitur AI</h3>
+                <ul class="space-y-2 text-xs text-[#1E293B]/70">
                     <li>• Upload PDF atau Word dokumen</li>
                     <li>• Berikan instruksi khusus via chat</li>
                     <li>• Ekstrak poin-poin penting otomatis</li>
@@ -166,9 +167,9 @@
                 </ul>
             </div>
 
-            <div class="bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-2xl p-6 text-white">
-                <h3 class="text-lg mb-3">💡 Tips Penggunaan</h3>
-                <ul class="space-y-2 text-sm text-white/90">
+            <div class="bg-gradient-to-br from-[#2C74B3] to-purple-600 rounded-lg md:rounded-2xl p-3 md:p-6 text-white">
+                <h3 class="text-sm md:text-lg font-bold mb-3">💡 Tips Penggunaan</h3>
+                <ul class="space-y-2 text-xs text-white/90">
                     <li>• Upload file catatan pelajaran kamu</li>
                     <li>• Berikan instruksi spesifik jika perlu</li>
                     <li>• AI akan membaca dan meringkas otomatis</li>
@@ -396,7 +397,7 @@
                                                  x-cloak
                                                  class="absolute z-50 mt-2 w-64 bg-white rounded-xl shadow-2xl border-2 border-[#2C74B3] p-3 max-h-48 overflow-y-auto">
                                                 <div class="grid grid-cols-8 gap-1">
-                                                    <template x-for="emoji in emojiList" :key="emoji">
+                                                    <template x-for="emoji in emojis" :key="emoji">
                                                         <button 
                                                             type="button"
                                                             @click="newCategoryEmoji = emoji; showEmojiPicker = false"
@@ -515,13 +516,20 @@ function aiSummarize() {
         summaryMetadata: null,
         tags: [],
         tagInput: '',
+        isDragging: false,
+        
+        // Re-summarize data
+        isResummarize: {{ isset($resummarizeData) ? 'true' : 'false' }},
+        resummarizeNoteId: {{ isset($resummarizeData) ? $resummarizeData['note_id'] : 'null' }},
+        resummarizeContent: @json(isset($resummarizeData) ? $resummarizeData['content'] : null),
+        resummarizeTitle: @json(isset($resummarizeData) ? $resummarizeData['title'] : null),
         
         // New category fields
         newCategoryName: '',
         newCategoryEmoji: '📁',
         newCategoryColor: '#3B82F6',
         showEmojiPicker: false,
-        emojiList: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖋️', '🖊️', '🖌️', '🖍️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️'],
+        emojis: ['📁', '📚', '📖', '📝', '📊', '💼', '🎓', '🔬', '🧪', '📐', '📏', '🖊️', '✏️', '📌', '📍', '🎨', '🎭', '🎪', '🎬', '🎮', '🎯', '🎲', '🧩', '🎸', '🎹', '🎺', '🎻', '🥁', '💻', '⌨️', '🖥️', '🖨️', '📱', '☎️', '📞', '📟', '📠', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✒️', '🖋️', '🖌️', '🖍️', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📋', '📎', '🖇️', '✂️', '🗃️', '🗄️', '🗑️'],
         
         // Revision state
         revisionInstruction: '',
@@ -529,6 +537,30 @@ function aiSummarize() {
         revisionError: null,
         revisionSuccess: false,
         originalFileContent: null, // Store original content for revisions
+
+        init() {
+            // If this is a re-summarize request, auto-load the content
+            if (this.isResummarize && this.resummarizeContent) {
+                this.uploadedFile = {
+                    name: this.resummarizeTitle + ' (Re-summarize)',
+                    size: this.resummarizeContent.length,
+                    type: 'text/html'
+                };
+                this.fileSize = this.formatFileSize(this.resummarizeContent.length);
+                this.originalFileContent = this.resummarizeContent;
+                
+                // Show info message
+                this.$nextTick(() => {
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-4 mb-6';
+                    infoDiv.innerHTML = '📝 Mode Re-summarize: "' + this.resummarizeTitle + '". Berikan instruksi baru untuk mengubah ringkasan.';
+                    const container = document.querySelector('.max-w-5xl');
+                    if (container && container.children[1]) {
+                        container.insertBefore(infoDiv, container.children[1]);
+                    }
+                });
+            }
+        },
 
         formatMarkdown(text) {
             if (!text) return '';
@@ -553,30 +585,57 @@ function aiSummarize() {
         handleFileUpload(event) {
             const file = event.target.files[0];
             if (file) {
-                const validTypes = [
-                    'application/pdf', 
-                    'application/msword', 
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'text/plain'
-                ];
-                const validExtensions = ['.pdf', '.doc', '.docx', '.txt'];
-                const fileName = file.name.toLowerCase();
-                const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-                
-                if (validTypes.includes(file.type) || hasValidExtension) {
-                    // Check file size (max 10MB)
-                    if (file.size > 10 * 1024 * 1024) {
-                        alert('❌ File terlalu besar! Maksimal 10 MB');
-                        return;
-                    }
-                    
-                    this.uploadedFile = file;
-                    this.fileSize = this.formatFileSize(file.size);
-                    this.summary = '';
-                    this.chatMessages = [];
-                } else {
-                    alert('❌ Mohon upload file PDF, DOC, DOCX, atau TXT saja');
+                this.processFile(file);
+            }
+        },
+
+        handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = true;
+        },
+
+        handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = false;
+        },
+
+        handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.isDragging = false;
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.processFile(files[0]);
+            }
+        },
+
+        processFile(file) {
+            const validTypes = [
+                'application/pdf', 
+                'application/msword', 
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain'
+            ];
+            const validExtensions = ['.pdf', '.doc', '.docx', '.txt'];
+            const fileName = file.name.toLowerCase();
+            const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (validTypes.includes(file.type) || hasValidExtension) {
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('❌ File terlalu besar! Maksimal 10 MB');
+                    return;
                 }
+                
+                this.uploadedFile = file;
+                this.fileSize = this.formatFileSize(file.size);
+                this.summary = '';
+                this.chatMessages = [];
+            } else {
+                alert('❌ Mohon upload file PDF, DOC, DOCX, atau TXT saja');
             }
         },
 
@@ -608,7 +667,16 @@ function aiSummarize() {
 
             this.isLoading = true;
             const formData = new FormData();
-            formData.append('document', this.uploadedFile);
+            
+            // If re-summarize mode, send content directly instead of file
+            if (this.isResummarize && this.resummarizeContent) {
+                // Create a blob from the content to simulate file upload
+                const blob = new Blob([this.resummarizeContent], { type: 'text/html' });
+                const file = new File([blob], this.resummarizeTitle + '.html', { type: 'text/html' });
+                formData.append('document', file);
+            } else {
+                formData.append('document', this.uploadedFile);
+            }
             
             // Extract user instructions from chat messages
             const instructions = this.chatMessages
@@ -694,10 +762,12 @@ function aiSummarize() {
             }
 
             try {
-                const title = this.noteTitle || ('Ringkasan: ' + this.uploadedFile.name);
+                const title = this.noteTitle || (this.isResummarize ? this.resummarizeTitle : ('Ringkasan: ' + this.uploadedFile.name));
                 
                 // Debug: log content info before saving
                 console.log('💾 Saving summary:', {
+                    isResummarize: this.isResummarize,
+                    noteId: this.resummarizeNoteId,
                     length: this.summary.length,
                     firstChars: this.summary.substring(0, 100),
                     hasHTML: /<[^>]+>/.test(this.summary),
@@ -711,6 +781,11 @@ function aiSummarize() {
                     title: title,
                     tags: this.tags
                 };
+                
+                // If re-summarize mode, include note ID for update
+                if (this.isResummarize && this.resummarizeNoteId) {
+                    requestBody.note_id = this.resummarizeNoteId;
+                }
 
                 // If creating new category, include category data
                 if (this.selectedCategory === 'new') {

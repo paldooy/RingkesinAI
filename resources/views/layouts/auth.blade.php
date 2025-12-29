@@ -8,8 +8,38 @@
     
     <!-- Tailwind CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        .auth-background {
+            position: relative;
+            min-height: 100vh;
+            background-image: url('{{ asset('images/background.jpg') }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        
+        .auth-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to left, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4));
+        }
+        
+        .auth-content {
+            position: relative;
+            z-index: 10;
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#A7C7E7] to-[#2C74B3] flex items-center justify-center p-4">
-    @yield('content')
+<body class="auth-background flex items-center justify-center p-4">
+    <div class="auth-overlay"></div>
+    <div class="auth-content">
+        @yield('content')
+    </div>
 </body>
 </html>

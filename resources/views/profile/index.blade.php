@@ -3,25 +3,37 @@
 @section('title', 'Profil - Ringkesin')
 
 @section('content')
-<div class="flex-1 bg-[#F9FAFB] overflow-auto">
-    <div class="max-w-4xl mx-auto p-8">
+<div class="flex-1 bg-[#F9FAFB] overflow-auto" x-data="{ editMode: false }">
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-[#1E293B] mb-2">Profil Saya</h1>
-            <p class="text-sm text-[#1E293B]/60">
-                Kelola informasi akun dan preferensi kamu
-            </p>
+        <div class="flex items-center justify-between my-6 sm:mb-8">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-[#1E293B] mb-2">Profil Saya</h1>
+                <p class="text-xs sm:text-sm text-[#1E293B]/60">
+                    Kelola informasi akun dan preferensi kamu
+                </p>
+            </div>
+            <button 
+                x-show="!editMode"
+                @click="editMode = true"
+                class="bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-colors flex items-center gap-2 text-xs sm:text-sm"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+                Edit Profil
+            </button>
         </div>
 
         @if(session('success'))
-            <div class="bg-green-50 border border-green-200 text-green-600 rounded-xl p-4 mb-6">
+            <div class="bg-green-50 border border-green-200 text-green-600 rounded-xl p-3 sm:p-4 mb-6 text-xs sm:text-sm">
                 {{ session('success') }}
             </div>
         @endif
 
         @if ($errors->any())
-            <div class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4 mb-6">
-                <ul class="list-disc list-inside text-sm">
+            <div class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 sm:p-4 mb-6">
+                <ul class="list-disc list-inside text-xs sm:text-sm space-y-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -30,123 +42,67 @@
         @endif
 
         <!-- Profile Header Card -->
-        <div class="bg-gradient-to-r from-[#2C74B3] to-[#5B8EC9] rounded-2xl p-8 mb-6 text-white shadow-lg">
-            <div class="flex items-center gap-6">
-                <div class="relative">
-                    <div class="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center text-4xl font-bold">
-                        @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}" class="w-full h-full rounded-full object-cover">
-                        @else
-                            {{ strtoupper(substr($user->name, 0, 2)) }}
-                        @endif
+        <div class="bg-gradient-to-r from-[#2C74B3] to-[#5B8EC9] rounded-2xl p-4 sm:p-6 lg:p-8 mb-6 text-white shadow-lg">
+            <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                <div class="relative flex-shrink-0">
+                    <div class="w-20 sm:w-24 h-20 sm:h-24 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center text-3xl sm:text-4xl font-bold">
+                        {{ strtoupper(substr($user->name, 0, 2)) }}
                     </div>
-                    <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
+                    <div class="absolute -bottom-2 -right-2 w-6 sm:w-8 h-6 sm:h-8 bg-green-500 rounded-full border-4 border-white shadow-lg"></div>
                 </div>
-                <div class="flex-1">
-                    <h2 class="text-2xl font-bold mb-2">{{ $user->name }}</h2>
-                    <p class="text-white/80 mb-3">{{ $user->email }}</p>
-                    <div class="flex items-center gap-4 text-sm">
-                        <span class="flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            Bergabung {{ $daysJoined }} hari yang lalu
-                        </span>
-                    </div>
+                <div class="flex-1 text-center sm:text-left">
+                    <h2 class="text-lg sm:text-2xl font-bold mb-1 sm:mb-2 break-words">{{ $user->name }}</h2>
+                    <p class="text-white/80 text-xs sm:text-base break-all">{{ $user->email }}</p>
+                    @if($user->bio)
+                        <p class="text-white/70 text-xs sm:text-sm mt-2">{{ $user->bio }}</p>
+                    @endif
                 </div>
             </div>
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="grid grid-cols-2 gap-3 sm:gap-6 mb-6">
+            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-[#E5E7EB]">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-10 sm:w-12 h-10 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 sm:w-6 h-5 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-sm text-[#1E293B]/60 mb-1">Total Catatan</p>
-                        <p class="text-2xl font-bold text-[#1E293B]">{{ $totalNotes }}</p>
+                    <div class="min-w-0">
+                        <p class="text-xs sm:text-sm text-[#1E293B]/60 mb-1">Total Catatan</p>
+                        <p class="text-lg sm:text-2xl font-bold text-[#1E293B]">{{ $totalNotes }}</p>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-[#E5E7EB]">
+                <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-10 sm:w-12 h-10 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 sm:w-6 h-5 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                         </svg>
                     </div>
-                    <div>
-                        <p class="text-sm text-[#1E293B]/60 mb-1">Kategori</p>
-                        <p class="text-2xl font-bold text-[#1E293B]">{{ $totalCategories }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-[#E5E7EB]">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="text-sm text-[#1E293B]/60 mb-1">Pencapaian</p>
-                        <p class="text-2xl font-bold text-[#1E293B]">🏆 Pemula</p>
+                    <div class="min-w-0">
+                        <p class="text-xs sm:text-sm text-[#1E293B]/60 mb-1">Kategori</p>
+                        <p class="text-lg sm:text-2xl font-bold text-[#1E293B]">{{ $totalCategories }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Edit Profile Form -->
-        <div class="bg-white rounded-2xl p-8 shadow-sm border border-[#E5E7EB]">
-            <h2 class="text-2xl font-bold text-[#1E293B] mb-6">Edit Profil</h2>
+        <div x-show="editMode" x-cloak class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-[#E5E7EB] mb-6">
+            <h2 class="text-lg sm:text-2xl font-bold text-[#1E293B] mb-4 sm:mb-6">Edit Informasi Profil</h2>
             
-            <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="space-y-6">
+            <form method="POST" action="{{ route('profile.update') }}" class="space-y-4 sm:space-y-6">
                 @csrf
                 @method('PUT')
 
-                <!-- Avatar Upload -->
-                <div x-data="{ imagePreview: '{{ $user->avatar ? asset('storage/' . $user->avatar) : '' }}' }">
-                    <label class="block text-sm font-medium text-[#1E293B] mb-3">
-                        Foto Profil
-                    </label>
-                    <div class="flex items-center gap-4">
-                        <div class="w-20 h-20 rounded-full bg-[#F9FAFB] border-2 border-[#E5E7EB] flex items-center justify-center text-2xl font-bold overflow-hidden">
-                            <template x-if="imagePreview">
-                                <img :src="imagePreview" alt="Preview" class="w-full h-full object-cover">
-                            </template>
-                            <template x-if="!imagePreview">
-                                <span>{{ strtoupper(substr($user->name, 0, 2)) }}</span>
-                            </template>
-                        </div>
-                        <div>
-                            <input 
-                                type="file" 
-                                name="avatar" 
-                                id="avatar"
-                                accept="image/*"
-                                @change="imagePreview = URL.createObjectURL($event.target.files[0])"
-                                class="hidden"
-                            />
-                            <label for="avatar" class="inline-block bg-[#2C74B3] hover:bg-[#205295] text-white px-4 py-2 rounded-lg cursor-pointer transition-colors text-sm">
-                                Upload Foto
-                            </label>
-                            <p class="text-xs text-[#1E293B]/50 mt-1">
-                                JPG, PNG, max 2MB
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Name -->
                 <div>
-                    <label for="name" class="block text-sm font-medium text-[#1E293B] mb-2">
-                        Nama Lengkap
+                    <label for="name" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                        Nama Lengkap <span class="text-red-500">*</span>
                     </label>
                     <input 
                         type="text" 
@@ -154,28 +110,39 @@
                         name="name" 
                         value="{{ old('name', $user->name) }}"
                         required
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
                     />
                 </div>
 
-                <!-- Email -->
+                <!-- Email (Display Only) -->
                 <div>
-                    <label for="email" class="block text-sm font-medium text-[#1E293B] mb-2">
+                    <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
                         Email
                     </label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        value="{{ old('email', $user->email) }}"
-                        required
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
-                    />
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <input 
+                            type="email" 
+                            value="{{ $user->email }}"
+                            disabled
+                            class="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-3 text-sm rounded-xl border border-gray-300 bg-gray-50 text-gray-500 cursor-not-allowed"
+                        />
+                        <button 
+                            type="button"
+                            @click="$dispatch('open-email-modal')"
+                            class="px-3 sm:px-4 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors font-medium whitespace-nowrap flex items-center justify-center gap-2 text-xs sm:text-sm"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                            Ubah Email
+                        </button>
+                    </div>
+                    <p class="text-xs text-[#1E293B]/50 mt-1">Ubah email memerlukan verifikasi keamanan</p>
                 </div>
 
                 <!-- Bio -->
                 <div>
-                    <label for="bio" class="block text-sm font-medium text-[#1E293B] mb-2">
+                    <label for="bio" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
                         Bio
                     </label>
                     <textarea 
@@ -183,46 +150,390 @@
                         name="bio" 
                         rows="4"
                         placeholder="Ceritakan sedikit tentang kamu..."
-                        class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition resize-none"
+                        class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition resize-none"
                     >{{ old('bio', $user->bio) }}</textarea>
                 </div>
 
                 <!-- Submit Button -->
-                <div class="flex gap-3 pt-4">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200">
                     <button 
                         type="submit"
-                        class="bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-8 py-3 rounded-xl transition-colors flex items-center gap-2"
+                        class="bg-[#2C74B3] hover:bg-[#205295] text-white font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                         Simpan Perubahan
                     </button>
-                    <a 
-                        href="{{ route('dashboard') }}"
-                        class="border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium px-8 py-3 rounded-xl transition-colors"
+                    <button 
+                        type="button"
+                        @click="editMode = false"
+                        class="border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors text-sm sm:text-base text-center"
                     >
                         Batal
-                    </a>
+                    </button>
                 </div>
             </form>
         </div>
 
-        <!-- Achievement Badge (Optional) -->
-        <div class="mt-6 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-6 border-2 border-yellow-200">
-            <div class="flex items-center gap-4">
-                <div class="text-5xl">🏆</div>
+        <!-- Change Password Section -->
+        <div class="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 shadow-sm border border-[#E5E7EB] mt-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                </div>
                 <div>
-                    <h3 class="text-xl font-bold text-[#1E293B] mb-1">Badge Pencapaian</h3>
-                    <p class="text-sm text-[#1E293B]/70 mb-2">
-                        Kamu mendapat badge "Pemula" karena sudah membuat {{ $totalNotes }} catatan!
+                    <h2 class="text-lg sm:text-2xl font-bold text-[#1E293B]">Ubah Password</h2>
+                    <p class="text-xs sm:text-sm text-[#1E293B]/60">Pastikan menggunakan password yang kuat dan unik</p>
+                </div>
+            </div>
+            
+            <form method="POST" action="{{ route('profile.password') }}" class="space-y-4 sm:space-y-6">
+                @csrf
+                @method('PUT')
+
+                <!-- Current Password -->
+                <div x-data="{ showCurrentPassword: false }">
+                    <label for="current_password" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                        Password Saat Ini <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            :type="showCurrentPassword ? 'text' : 'password'"
+                            id="current_password" 
+                            name="current_password" 
+                            required
+                            autocomplete="off"
+                            readonly
+                            onfocus="this.removeAttribute('readonly');"
+                            placeholder="Masukkan password saat ini"
+                            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        />
+                        <button 
+                            type="button"
+                            @click="showCurrentPassword = !showCurrentPassword"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                            <svg x-show="!showCurrentPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg x-show="showCurrentPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-cloak>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    @error('current_password')
+                        <p class="text-red-500 text-xs sm:text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- New Password -->
+                <div x-data="{ showNewPassword: false }">
+                    <label for="new_password" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                        Password Baru <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            :type="showNewPassword ? 'text' : 'password'"
+                            id="new_password" 
+                            name="new_password" 
+                            required
+                            autocomplete="off"                            
+                            readonly
+                            onfocus="this.removeAttribute('readonly');"                            
+                            placeholder="Minimal 8 karakter"
+                            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        />
+                        <button 
+                            type="button"
+                            @click="showNewPassword = !showNewPassword"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                            <svg x-show="!showNewPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg x-show="showNewPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-cloak>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="text-xs text-[#1E293B]/50 mt-1">
+                        Gunakan kombinasi huruf, angka, dan simbol untuk keamanan maksimal
                     </p>
-                    <div class="flex gap-2">
-                        <span class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-lg text-xs font-medium">🥉 Pemula (1-10 catatan)</span>
+                    @error('new_password')
+                        <p class="text-red-500 text-xs sm:text-sm mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Confirm New Password -->
+                <div x-data="{ showConfirmPassword: false }">
+                    <label for="new_password_confirmation" class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                        Konfirmasi Password Baru <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            :type="showConfirmPassword ? 'text' : 'password'"
+                            id="new_password_confirmation" 
+                            name="new_password_confirmation" 
+                            required
+                            autocomplete="off"                            
+                            readonly
+                            onfocus="this.removeAttribute('readonly');"                            
+                            placeholder="Ketik ulang password baru"
+                            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm pr-10 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        />
+                        <button 
+                            type="button"
+                            @click="showConfirmPassword = !showConfirmPassword"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                            <svg x-show="!showConfirmPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            <svg x-show="showConfirmPassword" class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-cloak>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
+
+                <!-- Info Alert -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded-lg">
+                    <div class="flex items-start gap-2 sm:gap-3">
+                        <svg class="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="text-xs sm:text-sm text-blue-800">
+                            <p class="font-medium mb-1">Tips Keamanan Password:</p>
+                            <ul class="list-disc list-inside space-y-0.5 text-xs">
+                                <li>Minimal 8 karakter</li>
+                                <li>Kombinasi huruf besar dan kecil</li>
+                                <li>Sertakan angka dan karakter khusus (@, #, $, dll)</li>
+                                <li>Jangan gunakan password yang sama dengan akun lain</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-gray-200">
+                    <button 
+                        type="submit"
+                        class="bg-red-600 hover:bg-red-700 text-white font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                    >
+                        <svg class="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Ubah Password
+                    </button>
+                    <button 
+                        type="reset"
+                        class="border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium px-4 sm:px-8 py-2 sm:py-3 rounded-xl transition-colors text-sm sm:text-base"
+                    >
+                        Reset
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Email Modal -->
+    <div 
+        x-data="{ 
+            showEmailModal: false,
+            step: 'request',
+            newEmail: '',
+            otpCode: '',
+            verifying: false,
+            error: '',
+            success: ''
+        }"
+        @open-email-modal.window="showEmailModal = true; step = 'request'; error = ''; success = ''"
+        x-show="showEmailModal"
+        x-cloak
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        @click.self="showEmailModal = false"
+    >
+        <div class="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6" @click.stop>
+            <h2 class="text-lg sm:text-2xl font-bold text-[#1E293B] mb-2">Ubah Email</h2>
+            <p class="text-xs sm:text-sm text-[#1E293B]/60 mb-6">
+                Verifikasi diperlukan untuk keamanan akun Anda
+            </p>
+
+            <!-- Step 1: Request Email Change -->
+            <div x-show="step === 'request'">
+                <form @submit.prevent="
+                    verifying = true;
+                    error = '';
+                    fetch('{{ route('profile.email.request') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ new_email: newEmail })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        verifying = false;
+                        if(data.success) {
+                            step = 'verify';
+                        } else {
+                            error = data.error || 'Terjadi kesalahan';
+                        }
+                    })
+                    .catch(e => {
+                        verifying = false;
+                        error = 'Terjadi kesalahan koneksi';
+                    })
+                " class="space-y-3 sm:space-y-4">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                            Email Saat Ini
+                        </label>
+                        <input 
+                            type="email" 
+                            value="{{ $user->email }}"
+                            disabled
+                            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm rounded-xl border border-gray-300 bg-gray-50 text-gray-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                            Email Baru <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            x-model="newEmail"
+                            required
+                            autocomplete="off"
+                            placeholder="email.baru@example.com"
+                            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition"
+                        />
+                    </div>
+
+                    <div x-show="error" class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-2 sm:p-3 text-xs sm:text-sm" x-text="error"></div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-2 sm:p-3 text-xs sm:text-sm text-blue-700">
+                        <p class="font-medium mb-1">📧 Proses Verifikasi:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-xs">
+                            <li>Kode OTP akan dikirim ke email BARU yang Anda masukkan</li>
+                            <li>Masukkan kode OTP untuk memverifikasi email tersebut</li>
+                            <li>Email akun Anda akan langsung berubah setelah verifikasi</li>
+                        </ol>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-2 pt-4">
+                        <button 
+                            type="submit"
+                            :disabled="verifying || !newEmail"
+                            class="flex-1 bg-[#2C74B3] hover:bg-[#205295] disabled:bg-gray-300 text-white font-medium py-2 sm:py-3 rounded-xl transition-colors text-sm"
+                        >
+                            <span x-show="!verifying">Kirim Kode Verifikasi</span>
+                            <span x-show="verifying">Mengirim...</span>
+                        </button>
+                        <button 
+                            type="button"
+                            @click="showEmailModal = false"
+                            class="px-4 sm:px-6 border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium py-2 sm:py-3 rounded-xl transition-colors text-sm"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Step 2: Verify OTP -->
+            <div x-show="step === 'verify'">
+                <form @submit.prevent="
+                    verifying = true;
+                    error = '';
+                    fetch('{{ route('profile.email.verify') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ 
+                            new_email: newEmail,
+                            otp_code: otpCode 
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        verifying = false;
+                        if(data.success) {
+                            success = data.message;
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            error = data.error || 'Kode OTP tidak valid';
+                        }
+                    })
+                    .catch(e => {
+                        verifying = false;
+                        error = 'Terjadi kesalahan koneksi';
+                    })
+                " class="space-y-3 sm:space-y-4">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-2 sm:p-4 text-xs sm:text-sm text-green-700">
+                        <p class="font-medium mb-1">✅ Kode verifikasi telah dikirim!</p>
+                        <p class="text-xs">
+                            Cek email baru Anda (<span x-text="newEmail"></span>) untuk mendapatkan kode OTP.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-[#1E293B] mb-2">
+                            Kode OTP (dari email baru) <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            x-model="otpCode"
+                            required
+                            maxlength="6"
+                            placeholder="000000"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:border-[#2C74B3] focus:ring-2 focus:ring-[#2C74B3]/20 outline-none transition text-center text-xl sm:text-2xl font-mono tracking-widest"
+                        />
+                        <p class="text-xs text-[#1E293B]/60 mt-2">
+                            Masukkan kode 6 digit yang dikirim ke email baru Anda
+                        </p>
+                    </div>
+
+                    <div x-show="error" class="bg-red-50 border border-red-200 text-red-600 rounded-xl p-2 sm:p-3 text-xs sm:text-sm" x-text="error"></div>
+                    <div x-show="success" class="bg-green-50 border border-green-200 text-green-600 rounded-xl p-2 sm:p-3 text-xs sm:text-sm" x-text="success"></div>
+
+                    <div class="flex flex-col sm:flex-row gap-2 pt-4">
+                        <button 
+                            type="submit"
+                            :disabled="verifying || otpCode.length !== 6"
+                            class="flex-1 bg-[#2C74B3] hover:bg-[#205295] disabled:bg-gray-300 text-white font-medium py-2 sm:py-3 rounded-xl transition-colors text-sm"
+                        >
+                            <span x-show="!verifying">Verifikasi & Ubah Email</span>
+                            <span x-show="verifying">Memverifikasi...</span>
+                        </button>
+                        <button 
+                            type="button"
+                            @click="step = 'request'; otpCode = ''"
+                            class="px-4 sm:px-6 border border-[#E5E7EB] hover:bg-[#F9FAFB] text-[#1E293B] font-medium py-2 sm:py-3 rounded-xl transition-colors text-sm"
+                        >
+                            Kembali
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
 @endsection
+
+@push('styles')
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+@endpush

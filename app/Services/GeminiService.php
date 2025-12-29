@@ -4,26 +4,107 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Exception;
 
 class GeminiService
 {
-    private string $apiKey;
+    private array $apiKeys = [];
     private string $model;
     private string $baseUrl = 'https://generativelanguage.googleapis.com';
 
     public function __construct()
     {
-        $this->apiKey = config('services.gemini.api_key');
+        $this->loadApiKeys();
         $this->model = config('services.gemini.model', 'gemini-2.0-flash-lite');
         
-        if (empty($this->apiKey)) {
-            throw new Exception('GOOGLE_API_KEY belum dikonfigurasi di file .env');
+        if (empty($this->apiKeys)) {
+            throw new Exception('GOOGLE_API_KEY atau GEMINI_API_KEYS belum dikonfigurasi di file .env');
         }
     }
 
     /**
-     * Generate summary from text using Gemini API.
+     * Load API keys from config (supports single key or multiple keys)
+     */
+    private function loadApiKeys(): void
+    {
+        // Check for multiple keys first (comma-separated)
+        $multipleKeys = config('services.gemini.api_keys');
+        
+        if (!empty($multipleKeys)) {
+            $keys = array_map('trim', explode(',', $multipleKeys));
+            $this->apiKeys = array_filter($keys, fn($key) => !empty($key));
+        }
+        
+        // Fallback to single key
+        if (empty($this->apiKeys)) {
+            $singleKey = config('services.gemini.api_key');
+            if (!empty($singleKey)) {
+                $this->apiKeys = [$singleKey];
+            }
+        }
+    }
+
+    private function forceUtf8Safe(string $text): string
+    {
+        // Hapus NULL byte
+        $text = str_replace("\x00", '', $text);
+    
+        // Paksa UTF-8
+        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    
+        // Buang karakter control + binary aneh
+        $text = preg_replace('/[^\P{C}\n\t]/u', '', $text);
+    
+        // FINAL FILTER: buang karakter yang masih invalid
+        $text = iconv('UTF-8', 'UTF-8//IGNORE', $text);
+    
+        return trim($text);
+    }
+
+
+    
+    /**
+     * Get next available API key (rotation with rate limit tracking)
+     */
+    private function getAvailableApiKey(): ?string
+    {
+        $now = time();
+        
+        foreach ($this->apiKeys as $index => $key) {
+            $cacheKey = 'gemini_rate_limit_' . md5($key);
+            $rateLimitedUntil = Cache::get($cacheKey, 0);
+            
+            // Key is available if not rate limited or rate limit expired
+            if ($rateLimitedUntil < $now) {
+                // Track usage for load balancing (optional)
+                $usageKey = 'gemini_usage_' . md5($key);
+                Cache::increment($usageKey);
+                
+                return $key;
+            }
+        }
+        
+        // All keys are rate limited, return first key anyway (will show error to user)
+        return $this->apiKeys[0] ?? null;
+    }
+
+    /**
+     * Mark API key as rate limited
+     */
+    private function markKeyAsRateLimited(string $apiKey, int $cooldownSeconds = 60): void
+    {
+        $cacheKey = 'gemini_rate_limit_' . md5($apiKey);
+        Cache::put($cacheKey, time() + $cooldownSeconds, $cooldownSeconds);
+        
+        Log::warning('Gemini API key rate limited', [
+            'key_prefix' => substr($apiKey, 0, 10) . '...',
+            'cooldown_seconds' => $cooldownSeconds,
+        ]);
+    }
+
+    /**
+     * Generate summary from text using Gemini API with key rotation.
      *
      * @param string $content
      * @param array $instructions
@@ -32,15 +113,70 @@ class GeminiService
      */
     public function generateSummary(string $content, array $instructions = []): array
     {
+        $content = $this->forceUtf8Safe($content);
+
+        foreach ($instructions as &$i) {
+            if (isset($i['text'])) {
+                $i['text'] = $this->forceUtf8Safe($i['text']);
+            }
+        }
+        
         // Build prompt with instructions
         $prompt = $this->buildPrompt($content, $instructions);
         
+        // Try each API key until success or all fail
+        $lastError = null;
+        $triedKeys = [];
+        
+        foreach ($this->apiKeys as $apiKey) {
+            // Skip if this key is currently rate limited
+            $cacheKey = 'gemini_rate_limit_' . md5($apiKey);
+            if (Cache::get($cacheKey, 0) > time()) {
+                continue;
+            }
+            
+            $triedKeys[] = substr($apiKey, 0, 10) . '...';
+            
+            $result = $this->makeApiRequest($apiKey, $prompt);
+            
+            if ($result['success']) {
+                return $result;
+            }
+            
+            // If rate limited, mark this key and try next
+            if (isset($result['error_code']) && $result['error_code'] === 429) {
+                $this->markKeyAsRateLimited($apiKey, 60);
+                $lastError = $result;
+                continue;
+            }
+            
+            // For other errors, return immediately
+            return $result;
+        }
+        
+        // All keys failed
+        if ($lastError) {
+            $lastError['error'] = '⏱️ Semua API key sedang dalam rate limit. Silakan tunggu 1-2 menit lalu coba lagi. (Tried ' . count($triedKeys) . ' keys)';
+            return $lastError;
+        }
+        
+        return [
+            'success' => false,
+            'error' => 'Tidak ada API key yang tersedia.',
+        ];
+    }
+
+    /**
+     * Make actual API request with specific key
+     */
+    private function makeApiRequest(string $apiKey, string $prompt): array
+    {
         // Prepare API URL
-        $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$this->apiKey}";
+        $url = "{$this->baseUrl}/v1beta/models/{$this->model}:generateContent?key={$apiKey}";
         
         try {
-            // Increased timeout for large documents (120 seconds)
-            $response = Http::timeout(120)->post($url, [
+            // Increased timeout for large documents (120 seconds for response, 30 seconds for connection)
+            $payload = [
                 'contents' => [
                     [
                         'parts' => [
@@ -52,9 +188,30 @@ class GeminiService
                     'temperature' => 0.7,
                     'topK' => 40,
                     'topP' => 0.95,
-                    'maxOutputTokens' => 12000, // Updated to 12000 as requested
+                    'maxOutputTokens' => 12000,
                 ]
-            ]);
+            ];
+
+            json_encode($payload, JSON_THROW_ON_ERROR);
+
+            try {
+                json_encode($payload, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                Log::error('JSON encode failed before Gemini request', [
+                    'error' => $e->getMessage(),
+                    'prompt_length' => strlen($prompt),
+                    'utf8_valid' => mb_check_encoding($prompt, 'UTF-8'),
+                ]);
+            
+                return [
+                    'success' => false,
+                    'error' => 'Konten dokumen mengandung karakter tidak valid (UTF-8). Coba file lain atau convert ke PDF text.',
+                ];
+            }
+
+            $response = Http::connectTimeout(30)
+                ->timeout(120)
+                ->post($url, $payload);
 
             if (!$response->successful()) {
                 return $this->handleError($response);
@@ -130,8 +287,17 @@ class GeminiService
             $userText = implode(' ', array_column($instructions, 'text'));
             $wantsParagraph = (stripos($userText, 'paragraf') !== false || stripos($userText, 'paragraph') !== false);
             $wantsNoBullets = (stripos($userText, 'tanpa poin') !== false || stripos($userText, 'tanpa bullet') !== false || stripos($userText, 'no bullet') !== false);
+            $wantsTable = (stripos($userText, 'tabel') !== false || stripos($userText, 'table') !== false);
             
-            if ($wantsParagraph || $wantsNoBullets) {
+            if ($wantsTable) {
+                $prompt .= "🚨 PENTING: User meminta FORMAT TABEL.\n";
+                $prompt .= "   → WAJIB gunakan format Markdown table dengan | (pipe)\n";
+                $prompt .= "   → Struktur: | Header 1 | Header 2 | Header 3 |\n";
+                $prompt .= "   →          |----------|----------|----------|\n";
+                $prompt .= "   →          | Data 1   | Data 2   | Data 3   |\n";
+                $prompt .= "   → JANGAN gunakan bullet points atau paragraf untuk data yang diminta dalam tabel\n";
+                $prompt .= "   → Setiap baris tabel harus memiliki informasi yang diminta user\n\n";
+            } elseif ($wantsParagraph || $wantsNoBullets) {
                 $prompt .= "🚨 PENTING: User meminta FORMAT PARAGRAF / TANPA POIN-POIN.\n";
                 $prompt .= "   → WAJIB menulis dalam bentuk PARAGRAF penuh\n";
                 $prompt .= "   → DILARANG KERAS menggunakan bullet points (-, *, •) atau numbering (1., 2., 3.)\n";
@@ -143,7 +309,8 @@ class GeminiService
             $prompt .= "   1. Instruksi user di atas adalah HUKUM yang tidak boleh dilanggar\n";
             $prompt .= "   2. Jika dokumen panjang, TETAP ikuti format yang diminta user\n";
             $prompt .= "   3. Jika ada konflik antara efisiensi vs instruksi user → pilih instruksi user\n";
-            $prompt .= "   4. JANGAN gunakan format default AI jika user sudah spesifikasi format\n\n";
+            $prompt .= "   4. JANGAN gunakan format default AI jika user sudah spesifikasi format\n";
+            $prompt .= "   5. KHUSUS untuk tabel: Abaikan semua aturan tentang bullet points, gunakan Markdown table\n\n";
             
         } else {
             // AUTO MODE: Default summarization
